@@ -15,7 +15,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "resolveJsonModule": true,
     "isolatedModules": true,

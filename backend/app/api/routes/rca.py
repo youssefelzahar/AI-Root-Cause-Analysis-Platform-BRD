@@ -1,9 +1,15 @@
+"""RCA investigation endpoints.
+
+These predate Phase 1 and are preserved unchanged so the existing dashboard
+keeps working. The full RCA engine is PRD section 14 (future phase).
+"""
+
 from fastapi import APIRouter
 
 from app.schemas.rca import InvestigationRequest, InvestigationResult
 from app.services.rca_engine import analyze
 
-router = APIRouter()
+router = APIRouter(tags=["rca"])
 
 
 @router.post("/investigations", response_model=InvestigationResult)

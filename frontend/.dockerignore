@@ -1,3 +1,8 @@
 node_modules
 .next
-npm-debug.log
+npm-debug.log*
+dev-server*.log
+.env
+.env.*
+.git
+*.md

@@ -1,19 +1,47 @@
-.env
-.DS_Store
-Thumbs.db
-
 # Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
 .venv/
+venv/
 
-# Node
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local data
+/data/
+backend/data/
+uploads/
+storage/
+*.db
+*.duckdb
+*.duckdb.wal
+
+# Tests / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend
 node_modules/
 .next/
-npm-debug.log*
-dev-server*.log
-
-# Build output
 dist/
 build/
+npm-debug.log*
+
+# Logs
+*.log
+logs/
+dev-server*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/

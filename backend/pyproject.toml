@@ -1,0 +1,21 @@
+# Tool configuration only. Runtime dependencies live in requirements.txt
+# because the Dockerfile installs from it.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "slow: generates large fixtures",
+    "pg: requires a real PostgreSQL database",
+    "mssql: requires a reachable SQL Server instance",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]  # FastAPI Depends() in defaults is the documented pattern

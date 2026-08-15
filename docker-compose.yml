@@ -2,8 +2,13 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # Baked into .next/routes-manifest.json by rewrites(); changing it
+        # requires a rebuild, unlike API_INTERNAL_URL below.
+        API_PROXY_TARGET: http://backend:8000
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      # Read at runtime by server components inside the container network.
+      API_INTERNAL_URL: http://backend:8000
     ports:
       - "3000:3000"
     depends_on:
@@ -15,11 +20,20 @@ services:
     environment:
       APP_ENV: development
       DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/rca
-      CORS_ORIGINS: '["http://localhost:3000"]'
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:8080"]'
+      RUN_MIGRATIONS: "true"
+      STORAGE_LOCAL_ROOT: /data/uploads
+      STORAGE_TMP_DIR: /data/tmp
+      DUCKDB_TEMP_DIR: /data/tmp/duckdb
+      MAX_UPLOAD_BYTES: "209715200"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-only-not-a-real-key_TRZ2VuZXJhdGVBUmVhbEs=}
+    volumes:
+      - uploads-data:/data
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16-alpine
@@ -31,6 +45,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rca"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   nginx:
     image: nginx:1.27-alpine
@@ -42,5 +61,18 @@ services:
       - frontend
       - backend
 
+  # Optional local SQL Server for exercising the connector:
+  #   docker compose --profile mssql up -d mssql
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["mssql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Str0ng!Passw0rd}
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+
 volumes:
   postgres-data:
+  uploads-data:
