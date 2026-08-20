@@ -19,13 +19,18 @@ from typing import Any
 
 from app.analysis.duckdb_session import duckdb_connection, quote_identifier, quote_literal, source_relation
 from app.analysis.type_inference import (
+    DATE_FORMATS,
     DUCKDB_CAST_TARGET,
+    MAX_DATE_TEXT_LENGTH,
+    STRONG_CONFIDENCE,
     TYPE_PRECEDENCE,
     ColumnInference,
     cast_success_predicate,
     cleaned_numeric_expression,
     null_sentinel_predicate,
     resolve_type,
+    strptime_expression,
+    strptime_success_predicate,
 )
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -187,6 +192,42 @@ def _profile(conn, path: Path, file_format: str) -> ProfileResult:  # noqa: ANN0
             leading_zeros[name] = non_null > 0 and leading_zero_count / non_null > 0.10
             text_lengths[name] = avg_len
 
+    # --- pass 1b: explicit date formats ---------------------------------
+    # DuckDB's native DATE cast only reads ISO ordering, so '30/01/2013' scores
+    # zero above and would be classified by whatever else parses it - stripping
+    # the slashes makes it a clean integer. Probing the known formats is only
+    # needed where nothing native already read the column confidently, which
+    # keeps ISO and numeric columns off this path entirely.
+    format_castable: dict[str, dict[str, int]] = {name: {} for name in column_names}
+    unresolved = [
+        name
+        for name in column_names
+        if max(
+            (raw_castable[name].get(t, 0) for t in TYPE_PRECEDENCE),
+            default=0,
+        )
+        < STRONG_CONFIDENCE * max(1, row_count - null_counts[name])
+        and (text_lengths.get(name) or 0) <= MAX_DATE_TEXT_LENGTH
+    ]
+    for batch in _batched(unresolved, COLUMN_BATCH):
+        selects = []
+        for name in batch:
+            col = quote_identifier(name)
+            missing = null_sentinel_predicate(col)
+            for fmt in DATE_FORMATS:
+                predicate = strptime_success_predicate(f"trim({col})", fmt)
+                selects.append(
+                    f"count(*) FILTER (WHERE NOT {missing} AND {predicate}) AS f_{len(selects)}"
+                )
+        rows = conn.execute(f"SELECT {', '.join(selects)} FROM {varchar_rel}").fetchone()
+        cursor = 0
+        for name in batch:
+            for fmt in DATE_FORMATS:
+                count = int(rows[cursor] or 0)
+                if count:
+                    format_castable[name][fmt] = count
+                cursor += 1
+
     # --- distinct counts (needed before boolean inference) --------------
     distinct_counts: dict[str, int] = {}
     for batch in _batched(column_names, COLUMN_BATCH):
@@ -208,6 +249,7 @@ def _profile(conn, path: Path, file_format: str) -> ProfileResult:  # noqa: ANN0
             null_count=null_counts[name],
             raw_castable=raw_castable[name],
             cleaned_castable=cleaned_castable[name],
+            format_castable=format_castable[name],
             distinct_count=distinct_counts.get(name),
             has_leading_zeros=leading_zeros.get(name, False),
         )
@@ -218,13 +260,14 @@ def _profile(conn, path: Path, file_format: str) -> ProfileResult:  # noqa: ANN0
             continue
         col = quote_identifier(name)
         missing = null_sentinel_predicate(col)
-        cast_type = DUCKDB_CAST_TARGET.get(inference.inferred_type)
-        if not cast_type:
+        if inference.inferred_type not in DUCKDB_CAST_TARGET:
             continue
-        expression = cleaned_numeric_expression(col) if inference.used_cleaning else f"trim({col})"
+        # Same expression the statistics use, so the samples are exactly the
+        # values those statistics dropped.
+        expression = _typed_expression(name, inference)
         samples = conn.execute(
             f"SELECT DISTINCT {col} FROM {varchar_rel} "
-            f"WHERE NOT {missing} AND TRY_CAST({expression} AS {cast_type}) IS NULL LIMIT 5"
+            f"WHERE NOT {missing} AND {expression} IS NULL LIMIT 5"
         ).fetchall()
         inference.sample_invalid_values = [str(row[0]) for row in samples if row[0] is not None]
 
@@ -297,6 +340,8 @@ def _profile(conn, path: Path, file_format: str) -> ProfileResult:  # noqa: ANN0
 def _typed_expression(name: str, inference: ColumnInference) -> str:
     """A cast expression yielding the resolved type from the VARCHAR relation."""
     col = quote_identifier(name)
+    if inference.date_format:
+        return strptime_expression(col, inference.date_format)
     cast_type = DUCKDB_CAST_TARGET.get(inference.inferred_type, "VARCHAR")
     source = cleaned_numeric_expression(col) if inference.used_cleaning else f"trim({col})"
     return f"TRY_CAST({source} AS {cast_type})"
@@ -437,6 +482,10 @@ def _profile_temporal(conn, relation, columns, inferences, stats) -> None:  # no
             "expected_periods": expected_periods,
             # Null rather than a fabricated number when frequency is unknown.
             "missing_periods": missing_periods,
+            # Null when the native cast read the column; set when an explicit
+            # format was needed, so the reading stays auditable.
+            "date_format": inferences[name].date_format,
+            "day_month_ambiguous": inferences[name].day_month_ambiguous,
         }
 
 

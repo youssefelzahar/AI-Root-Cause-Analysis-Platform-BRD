@@ -145,6 +145,36 @@ gamma,third
 """
 
 
+# RCA datasets live in files rather than module constants: they are large enough
+# that inlining them would bury the fixtures above, and the messy variant relies
+# on exact formatting that is easier to read as a real CSV.
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+
+
+@pytest.fixture
+def rca_golden_csv_bytes() -> bytes:
+    """The PRD section 19 example: only Cairo / A / Enterprise moves."""
+    return (FIXTURES / "rca_golden.csv").read_bytes()
+
+
+@pytest.fixture
+def rca_drivers_csv_bytes() -> bytes:
+    """Primary, secondary and offsetting factors, plus a new and a lost segment."""
+    return (FIXTURES / "rca_drivers.csv").read_bytes()
+
+
+@pytest.fixture
+def rca_messy_csv_bytes() -> bytes:
+    """The golden numbers with the measure arriving as currency-formatted text.
+
+    Covers the common upload case where revenue is a VARCHAR needing cleaning.
+    The harder all-columns-are-strings shape that ``excel_to_parquet`` and
+    ``rows_to_parquet`` produce is covered by the xlsx test, which exercises the
+    real conversion rather than imitating it.
+    """
+    return (FIXTURES / "rca_messy.csv").read_bytes()
+
+
 @pytest.fixture
 def clean_csv_bytes() -> bytes:
     return CLEAN_CSV.encode()

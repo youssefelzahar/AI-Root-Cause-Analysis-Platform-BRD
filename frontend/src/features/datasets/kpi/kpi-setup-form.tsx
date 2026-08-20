@@ -1,6 +1,7 @@
 "use client";
 
 import { PlayCircle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -358,8 +359,9 @@ export function KpiSetupForm({
           {saved ? (
             <div style={{ marginTop: 16 }}>
               <Alert tone="success" title="Analysis Ready">
-                The KPI definition is saved. Running RCA on your own dataset arrives in the next
-                phase.
+                The KPI definition is saved.{" "}
+                <Link href={`/investigations/${datasetId}`}>Run a root cause analysis</Link> to see
+                which segments drove its most recent change.
               </Alert>
             </div>
           ) : null}

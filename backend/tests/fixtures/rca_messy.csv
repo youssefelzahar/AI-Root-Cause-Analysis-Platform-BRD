@@ -1,0 +1,9 @@
+order_date,region,product,segment,revenue
+2026-06-15,Cairo,A,Enterprise,"$500.00"
+2026-06-15,Cairo,B,SMB,"$300.00"
+2026-06-15,Giza,A,Enterprise,"$400.00"
+2026-06-15,Giza,B,SMB,"$300.00"
+2026-07-15,Cairo,A,Enterprise,"$200.00"
+2026-07-15,Cairo,B,SMB,"$300.00"
+2026-07-15,Giza,A,Enterprise,"$400.00"
+2026-07-15,Giza,B,SMB,"$300.00"

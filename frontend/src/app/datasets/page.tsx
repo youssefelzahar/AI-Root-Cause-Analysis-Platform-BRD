@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, Panel, StatusPill, ValidationPill } from "@/components/ui";
+import { DeleteDatasetButton } from "@/features/datasets/delete-dataset-button";
 import { listDatasets } from "@/lib/api/datasets";
 import { formatBytes, formatDate, formatNumber } from "@/lib/format";
 
@@ -75,9 +76,16 @@ export default async function DatasetsPage() {
                     </td>
                     <td className="muted">{formatDate(dataset.created_at)}</td>
                     <td>
-                      <Link className="btn btn-ghost btn-sm" href={`/datasets/${dataset.id}/profile`}>
-                        View profile
-                      </Link>
+                      <div className="row-actions">
+                        <Link className="btn btn-ghost btn-sm" href={`/datasets/${dataset.id}/profile`}>
+                          View profile
+                        </Link>
+                        <DeleteDatasetButton
+                          datasetId={dataset.id}
+                          name={dataset.name}
+                          status={dataset.status}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}

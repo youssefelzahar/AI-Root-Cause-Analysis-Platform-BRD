@@ -820,3 +820,223 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ------------------------------------------------------------------- rca */
+.rca-tone-note {
+  font-size: 12px;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+}
+
+.rca-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 10px;
+  min-width: 80px;
+  position: relative;
+}
+
+/* The zero line the two halves grow away from. */
+.rca-bar::before {
+  background: var(--line);
+  bottom: -2px;
+  content: "";
+  left: 50%;
+  position: absolute;
+  top: -2px;
+  width: 1px;
+}
+
+.rca-bar-neg {
+  background: var(--red);
+  border-radius: 2px 0 0 2px;
+  height: 100%;
+  justify-self: end;
+}
+
+.rca-bar-pos {
+  background: var(--teal);
+  border-radius: 0 2px 2px 0;
+  height: 100%;
+  justify-self: start;
+}
+
+.rca-tree {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Only nested levels get the spine; the top level has no parent to connect to. */
+.rca-tree .rca-tree {
+  border-left: 1px solid var(--line);
+  margin-left: 11px;
+  padding-left: 18px;
+}
+
+.rca-node-row {
+  align-items: center;
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) 110px 62px 100px;
+  padding: 6px var(--space-2);
+  position: relative;
+}
+
+.rca-node-row:hover {
+  background: var(--surface-2);
+}
+
+/* Elbow joining a nested row to its parent's spine. */
+.rca-tree .rca-tree > .rca-node > .rca-node-row::before {
+  background: var(--line);
+  content: "";
+  height: 1px;
+  left: -18px;
+  position: absolute;
+  top: 50%;
+  width: 12px;
+}
+
+.rca-node-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rca-node-hint {
+  font-size: 12px;
+}
+
+.rca-node-delta,
+.rca-node-share {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.rca-node-note {
+  font-size: 12px;
+  margin: 0 0 4px 30px;
+}
+
+.rca-tree-root {
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-2);
+}
+
+.rca-tree-footnote {
+  font-size: 12px;
+  margin: var(--space-3) 0 0;
+}
+
+.rca-waterfall {
+  display: grid;
+  gap: 6px;
+}
+
+.rca-waterfall-row {
+  align-items: center;
+  display: grid;
+  font-size: 13px;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 170px) 1fr 110px;
+}
+
+.rca-waterfall-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rca-waterfall-track {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  display: block;
+  height: 14px;
+  position: relative;
+}
+
+.rca-waterfall-fill {
+  border-radius: 2px;
+  bottom: 0;
+  position: absolute;
+  top: 0;
+}
+
+.rca-waterfall-fill.down {
+  background: var(--red);
+}
+
+.rca-waterfall-fill.up {
+  background: var(--teal);
+}
+
+.rca-waterfall-fill.total {
+  background: var(--ink);
+  opacity: 0.65;
+}
+
+.rca-waterfall-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.rca-dimension-table {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 720px) {
+  .rca-node-row {
+    grid-template-columns: minmax(0, 1fr) 90px 52px;
+  }
+
+  .rca-node-row .rca-bar {
+    display: none;
+  }
+
+  .rca-waterfall-row {
+    grid-template-columns: minmax(0, 110px) 1fr 90px;
+  }
+}
+
+/* ------------------------------------------------------------ delete */
+.delete-inline {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.delete-error {
+  color: var(--red);
+  font-size: 13px;
+  /* The message sits in a table cell; wrap rather than widen the column. */
+  max-width: 24ch;
+  text-align: right;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.row-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # --- database --------------------------------------------------------
-    database_url: str = "postgresql+psycopg://postgres:postgres@db:5432/rca"
+    database_url: str = "postgresql+psycopg://postgres:12345678@db:5432/rca"
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_echo: bool = False
@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     duckdb_memory_limit: str = "512MB"
     duckdb_threads: int = 2
     duckdb_temp_dir: str = "/data/tmp/duckdb"
+
+    # --- root cause analysis ---------------------------------------------
+    # Safety cap on rows returned by one breakdown query. Display truncation is
+    # a separate, smaller limit in app.analysis.rca.constants.
+    rca_max_segments_scanned: int = 5_000
 
     # --- secrets ---------------------------------------------------------
     encryption_key: SecretStr | None = None

@@ -2,14 +2,16 @@
 
 Implementation of the platform described in `plans/AI_Root_Cause_Analysis_Platform_PRD_v3.pdf`.
 
-**Phase 1 — Data Foundation** is complete. A user uploads a CSV/Excel file or runs a SQL Server
-query and saves its output; the dataset is automatically validated and profiled; the UI shows the
-profile and quality status; the user configures a normalized KPI definition that marks the dataset
-**Analysis Ready** for the future RCA engine.
+**Phase 1 — Data Foundation** and **Phase 2 — Root Cause Analysis Engine** are both complete. A
+user uploads a CSV/Excel file or runs a SQL Server query and saves its output; the dataset is
+validated and profiled; the user configures a normalized KPI definition that marks it **Analysis
+Ready**; and the RCA engine then explains why that KPI changed, naming the segments behind the
+movement with the evidence for each claim.
 
 ```
 Upload / Connect Dataset → Schema Validation → Data Profiling
-    → KPI Detection → User KPI Selection → KPI Definition → RCA Engine
+    → KPI Detection → User KPI Selection → KPI Definition
+    → RCA Engine → Ranked Drivers + Hierarchical Tree
 ```
 
 > ⚠️ **This deployment has no authentication.** Per the project decision, Phase 1 ships without
@@ -125,7 +127,45 @@ dimension exists and is dimension-eligible, and the aggregation is legal for the
 - **Error sanitization** — driver errors routinely embed the whole connection string, so they are
   redacted before they reach a response or a log.
 
-### 1.7 Frontend
+### 1.7 Root cause analysis (Phase 2)
+
+Given an Analysis Ready dataset, answer *"why did this KPI change?"* — one DuckDB scan, roughly
+eight statements, no persistence.
+
+**Contribution is a share of the net change, sign preserved.** `contribution_i = Δ_i / Δ_total`, so
+contributions sum to exactly 1 and a segment moving *against* the KPI comes out negative — which is
+what makes it identifiable as an **offsetting factor** rather than a top driver. Values above 100 %
+and below 0 % are correct rather than clamped: if one exceeds 100 %, something else offset it.
+
+| Aggregation | How contribution is computed |
+|---|---|
+| `SUM`, `COUNT` | Additive over disjoint groups: `Δ_i / Δ_total` |
+| `AVG` | **Centred mix/rate decomposition** — `rate = w̄·Δm` (the group's own average moved) and `mix = (m̄ − Ā)·Δw` (its share of volume moved). Exact: the two sum to ΔA |
+| `COUNT_DISTINCT` | Additive **only if verified** — `Σ per-group distinct − total distinct == 0` means the dimension partitions the key set. Otherwise unattributable, with the overlap reported |
+| `MIN`, `MAX`, `MEDIAN` | **Unattributable.** No valid decomposition exists, so per-segment values and changes are reported with `contribution: null` rather than a fabricated number |
+
+**Drivers are classified by direction, then Pareto.** Primary drivers are the shortest prefix of
+same-direction segments reaching 80 % of the change; the rest above 5 % are secondary; anything
+moving the other way is an offsetting factor. A fixed threshold alone would return *zero* drivers
+when a change is spread over twenty segments at 5 % each — a false negative indistinguishable from
+"nothing explains this".
+
+**The tree descends by explanatory power, not by biggest segment.** `E = Σ|Δ_j − Δ_total·s_j| / |Δ_total|`
+measures how far a dimension deviates from *"everything moved in proportion to its size"*. `E = 0`
+means the dimension explains nothing, and if no dimension clears the floor the engine reports the
+change as **broad-based** instead of inventing a driver. Depth 3, decaying branching, and every
+unexpanded node records its own `stop_reason`.
+
+**Contribution at depth is a share of the global change**, at every level — so "58 %" always means
+58 % of the KPI movement the user asked about. A child holding 100 % of a parent that is itself 2 %
+of the total would otherwise render as "100 %" and read as the headline cause. The local view is
+carried separately as `share_of_parent_change`.
+
+Every node also carries **`expected_change` and `excess_change`** — what the segment would have done
+at its baseline share, and the surprise on top. Without those two, a large segment always looks like
+the driver simply because it is large.
+
+### 1.8 Frontend
 
 Next.js 16 App Router, React 19, Server Components by default with `"use client"` islands only
 where interaction demands it.
@@ -139,7 +179,8 @@ where interaction demands it.
 | `/datasets/[id]/profile` | **Overview / Columns / Quality / Statistics** tabs |
 | `/datasets/[id]/kpi` | KPI Setup — recommendations first, with reasons |
 | `/sql`, `/sql/new`, `/sql/[connectionId]` | Connections, editor, result grid, save-as-dataset |
-| `/investigations` | The pre-existing RCA demo dashboard |
+| `/investigations` | Picker: the datasets that are Analysis Ready |
+| `/investigations/[datasetId]` | The investigation — KPI summary, waterfall, drivers, tree, evidence |
 
 Upload progress uses **XMLHttpRequest** because `fetch()` cannot report it. Status polling checks
 document visibility and stops at a 10-minute deadline. The profile tabs are client state synced to
@@ -169,12 +210,13 @@ backend/app/
   db/models/      company, user, dataset, profile, validation, kpi, sql_connection, enums
   db/migrations/  0001 initial schema · 0002 seed default context
   schemas/        Pydantic request/response contracts
-  services/       dataset, profiling, validation, kpi, sql, storage, jobs, materialize, rca_engine
+  services/       dataset, dataset_source, profiling, validation, kpi, sql, storage, jobs,
+                  materialize, rca
   analysis/       duckdb_session, type_inference, profiler, kpi_heuristics   (pure, no DB)
+  analysis/rca/   constants, models, casting, period_analysis, dimension_analysis,
+                  contribution, ranking, tree, engine                       (pure, no DB)
   storage/        base (abstraction) + local
   connectors/     sqlserver, sql_guard
-  rca/            anomaly_detection, dimension_analysis, contribution, ranking,
-                  statistical_validation
 frontend/src/
   app/            routes
   components/     ui primitives + layout
@@ -182,7 +224,24 @@ frontend/src/
   lib/api/        typed client: base-url, http, errors, datasets, sql, uploads, rca
   styles/         tokens, base, components
 docker/nginx/
+docs/             database-erd.pdf
+scripts/          generate_erd.py
 ```
+
+### Entity relationship diagram
+
+**[docs/database-erd.pdf](docs/database-erd.pdf)** — all 8 tables with every column and type, the
+13 foreign keys with their cardinality and `ON DELETE` behaviour, plus a second page explaining
+why the model is shaped the way it is (the two `status` concepts, the two denormalised columns,
+why per-column statistics are rows rather than a JSON blob).
+
+```bash
+python scripts/generate_erd.py
+```
+
+The generator has no third-party dependencies — it emits vector PDF directly — and **verifies
+itself against SQLAlchemy's live metadata before writing**, exiting non-zero if a column has been
+added or removed without updating the diagram.
 
 **Tables:** `companies` · `users` · `datasets` · `dataset_profiles` · `column_profiles` ·
 `schema_validations` · `kpi_definitions` · `sql_connections`
@@ -290,9 +349,17 @@ bundle would permanently carry `localhost:8000`. Instead the browser always call
   object storage; nothing calls `local_path()` directly.
 - **`run_migrations` is dead config** — the setting exists and is documented in `.env.example`,
   but nothing reads it. Run Alembic explicitly.
-- **RCA on your own dataset is Phase 2.** Configuring a KPI marks a dataset Analysis Ready and
-  stores the normalized definition; `/investigations` still runs on demonstration data. The RCA
-  tree/evidence visualization and investigation history (PRD §17) are explicitly future phase.
+- **Investigations are not stored.** Each request recomputes from Parquet, so there is no history
+  and no shareable snapshot — a link re-runs the analysis. Adding an `investigations` table is the
+  natural next step if history is wanted.
+- **The engine reads more date formats than the profiler infers.** `casting.time_expression` falls
+  back through `DATE_FORMATS`, but Phase 1's profiler types a column with a plain `TRY_CAST`, so a
+  column of `15-Jun-2026` is inferred as text and KPI validation blocks it before RCA is reachable.
+  Aligning the two is a Phase 1 change.
+- **A partial newest period is skipped, not analysed.** When the data's own step size shows the
+  latest bucket is still filling, the engine steps back one period and says so — otherwise a
+  half-collected month reads as a collapse. With an unknown reporting frequency it cannot tell, and
+  keeps the period.
 
 ## 7. PRD gaps this implementation had to resolve
 
@@ -309,9 +376,18 @@ The PRD leaves four things undefined. These choices are worth reviewing:
 
 ## 8. Test suite
 
-`backend/tests/` — unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
-credential encryption, log redaction, local storage, and the RCA engine; integration tests for the
-upload flow, the KPI API, and the SQL API.
+**259 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
+credential encryption, log redaction and local storage; plus the RCA engine —
+contribution maths (including a property test that AVG's rate + mix effects reconstruct ΔA for
+random inputs), period resolution across all five comparison settings, driver classification, the
+generated SQL, and the engine driven against real DuckDB relations. Integration tests cover the
+upload flow, the KPI API, the SQL API and the RCA API.
+
+The golden RCA fixture is the PRD's own worked example, and the test proves the engine *discovers*
+`Cairo → A → Enterprise` from the arithmetic — the expected answer is nowhere in the engine. Two
+tests guard the string-typed-Parquet trap: one compares a currency-formatted measure against a
+numeric one, and one uploads a real **xlsx** so `excel_to_parquet` genuinely produces all-string
+columns, then asserts identical totals.
 
 Fixtures run against SQLite; models use `JSON().with_variant(JSONB, "postgresql")` so the same
 schema is testable without a server.
@@ -355,6 +431,15 @@ POST   /api/sql/validate                              lint a statement without r
 POST   /api/sql/connections/{id}/execute
 POST   /api/sql/connections/{id}/save-as-dataset
 
-POST   /api/investigations                            existing RCA demo
-GET    /api/demo
+POST   /api/rca/investigations                        {dataset_id, kpi_definition_id?} -> 200
 ```
+
+`POST /api/rca/investigations` returns 200 rather than 201: it is stateless and creates nothing.
+Failure codes that are really workflow states — `DATASET_NOT_ANALYSIS_READY`,
+`KPI_DEFINITION_NOT_FOUND`, `KPI_TIME_COLUMN_REQUIRED`, `RCA_COLUMN_MISSING` (schema drift),
+`RCA_NO_PREVIOUS_PERIOD` — are rendered inline by the UI with the next step, not as crashes. Outcomes
+that are not errors at all arrive as `state` (`no_data`, `no_previous_period`, `no_change`,
+`unattributable`) plus a `notices` array recording every judgement the engine had to make.
+
+**Wording is deliberate:** *driver*, *contributor*, *contribution*, *offsetting factor* — never
+*cause*. The engine measures which segments moved with the KPI, not why they moved.

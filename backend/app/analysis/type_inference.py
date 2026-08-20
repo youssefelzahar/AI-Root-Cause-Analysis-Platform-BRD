@@ -40,17 +40,41 @@ DUCKDB_CAST_TARGET = {
     InferredType.DATETIME: "TIMESTAMP",
 }
 
+# Most specific first. ``try_strptime`` rejects trailing characters, so a full
+# date can never be truncated by a coarser format in this list - the ordering
+# only settles genuine ambiguity such as day-first versus month-first.
 DATE_FORMATS = (
     "%Y-%m-%d",
     "%d/%m/%Y",
     "%m/%d/%Y",
     "%Y/%m/%d",
     "%d-%m-%Y",
+    "%d.%m.%Y",
     "%d-%b-%Y",
     "%b %d, %Y",
     "%Y-%m-%d %H:%M:%S",
     "%d/%m/%Y %H:%M:%S",
+    # Month grain. A reporting period is commonly stored as '2020-01', which is
+    # a period column, not a category - no plain number parses under these.
+    "%Y-%m",
+    "%Y/%m",
 )
+
+# The formats above that carry a time part, so a match resolves to DATETIME
+# rather than DATE.
+DATETIME_FORMATS = frozenset({"%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"})
+
+# The two orderings that cannot be told apart when every day-of-month is <= 12.
+AMBIGUOUS_DAY_FIRST = "%d/%m/%Y"
+AMBIGUOUS_MONTH_FIRST = "%m/%d/%Y"
+
+# No supported format is longer than this, so longer text is never probed.
+MAX_DATE_TEXT_LENGTH = 64
+
+
+def format_target(fmt: str) -> InferredType:
+    """The type a successful ``strptime`` of ``fmt`` resolves to."""
+    return InferredType.DATETIME if fmt in DATETIME_FORMATS else InferredType.DATE
 
 
 def confidence_label(confidence: float | None) -> str:
@@ -71,6 +95,9 @@ class TypeCandidate:
     confidence: float
     castable_count: int
     used_cleaning: bool = False
+    # The strptime format that produced this candidate, when a native cast
+    # could not read the column.
+    date_format: str | None = None
 
 
 @dataclass
@@ -86,6 +113,11 @@ class ColumnInference:
     invalid_value_count: int
     requires_conversion: bool
     used_cleaning: bool = False
+    # Set when the column only reads as a date through an explicit format.
+    date_format: str | None = None
+    # True when both day-first and month-first parse the whole column, so the
+    # chosen ordering is a guess the caller should surface.
+    day_month_ambiguous: bool = False
     candidates: dict[str, float] = field(default_factory=dict)
     sample_invalid_values: list[str] = field(default_factory=list)
 
@@ -110,11 +142,19 @@ def resolve_type(
     null_count: int,
     raw_castable: dict[InferredType, int],
     cleaned_castable: dict[InferredType, int] | None = None,
+    format_castable: dict[str, int] | None = None,
     distinct_count: int | None = None,
     has_leading_zeros: bool = False,
 ) -> ColumnInference:
-    """Pick the best type for a column from TRY_CAST success counts."""
+    """Pick the best type for a column from TRY_CAST success counts.
+
+    ``format_castable`` maps a ``DATE_FORMATS`` entry to the number of values
+    ``try_strptime`` read with it. DuckDB's native DATE cast only accepts ISO
+    ordering, so without these counts a ``30/01/2013`` column has zero temporal
+    confidence and gets classified by whatever else happens to parse it.
+    """
     cleaned_castable = cleaned_castable or {}
+    format_castable = format_castable or {}
 
     if non_null_count == 0:
         # Nothing to infer from - an all-null column stays a string and is
@@ -144,11 +184,40 @@ def resolve_type(
                 candidate_type, raw_ratio, raw_castable.get(candidate_type, 0), False
             )
 
+    # A non-ISO date only reads through an explicit format. Take the best one
+    # per target type, and only when it beats the native cast so an ISO column
+    # never pays for strptime.
+    best_format: dict[InferredType, tuple[str, int]] = {}
+    for fmt, count in format_castable.items():
+        target = format_target(fmt)
+        if count > best_format.get(target, ("", 0))[1]:
+            best_format[target] = (fmt, count)
+    for target, (fmt, count) in best_format.items():
+        ratio = count / non_null_count
+        existing = candidates.get(target)
+        if existing is None or ratio > existing.confidence:
+            candidates[target] = TypeCandidate(target, ratio, count, False, date_format=fmt)
+
     # Codes with leading zeros (postcodes, account numbers) are text even
     # though they parse as integers - converting them destroys data.
     if has_leading_zeros:
         candidates.pop(InferredType.INTEGER, None)
         candidates.pop(InferredType.NUMERIC, None)
+
+    # Stripping separators turns '30/01/2013' into the integer 30012013, so a
+    # date column can look like a perfectly clean number. A readable date always
+    # beats a number that only exists because the cleaner removed the
+    # separators - same reasoning as the leading-zero rule above.
+    best_temporal = max(
+        (candidates[t] for t in (InferredType.DATE, InferredType.DATETIME) if t in candidates),
+        key=lambda c: c.confidence,
+        default=None,
+    )
+    if best_temporal is not None and best_temporal.confidence >= MIN_ACCEPTABLE_CONFIDENCE:
+        for numeric_type in (InferredType.INTEGER, InferredType.NUMERIC):
+            numeric = candidates.get(numeric_type)
+            if numeric is not None and numeric.used_cleaning:
+                candidates.pop(numeric_type)
 
     # Only treat 0/1 as boolean when there really are just two distinct values.
     if distinct_count is not None and distinct_count > 2:
@@ -180,6 +249,8 @@ def resolve_type(
         )
 
     declared_is_text = raw_type.upper() in {"VARCHAR", "STRING", "TEXT", "BLOB"}
+    day_first = format_castable.get(AMBIGUOUS_DAY_FIRST, 0)
+    month_first = format_castable.get(AMBIGUOUS_MONTH_FIRST, 0)
     return ColumnInference(
         column=column,
         raw_type=raw_type,
@@ -188,8 +259,14 @@ def resolve_type(
         non_null_count=non_null_count,
         null_count=null_count,
         invalid_value_count=max(0, non_null_count - chosen.castable_count),
-        requires_conversion=declared_is_text or chosen.used_cleaning,
+        # A format match means the stored text is not a date until converted.
+        requires_conversion=declared_is_text or chosen.used_cleaning or chosen.date_format is not None,
         used_cleaning=chosen.used_cleaning,
+        date_format=chosen.date_format,
+        day_month_ambiguous=(
+            chosen.date_format in (AMBIGUOUS_DAY_FIRST, AMBIGUOUS_MONTH_FIRST)
+            and day_first == month_first == non_null_count
+        ),
         candidates={t.value: round(c.confidence, 4) for t, c in candidates.items()},
     )
 
@@ -209,6 +286,23 @@ def cast_success_predicate(expression: str, target: InferredType) -> str:
             f"AND TRY_CAST({expression} AS DOUBLE) = floor(TRY_CAST({expression} AS DOUBLE)))"
         )
     return f"TRY_CAST({expression} AS {cast_type}) IS NOT NULL"
+
+
+def strptime_success_predicate(expression: str, fmt: str) -> str:
+    """SQL that is true when ``expression`` parses under ``fmt``."""
+    return f"try_strptime({expression}, '{fmt}') IS NOT NULL"
+
+
+def strptime_expression(quoted_column: str, fmt: str) -> str:
+    """A typed expression reading ``quoted_column`` with an explicit format.
+
+    ``try_strptime`` always returns TIMESTAMP, so a date-only format is narrowed
+    to DATE to keep the resolved type and the stored statistics consistent.
+    """
+    parsed = f"try_strptime(trim({quoted_column}), '{fmt}')"
+    if format_target(fmt) is InferredType.DATETIME:
+        return parsed
+    return f"CAST({parsed} AS DATE)"
 
 
 def cleaned_numeric_expression(quoted_column: str) -> str:

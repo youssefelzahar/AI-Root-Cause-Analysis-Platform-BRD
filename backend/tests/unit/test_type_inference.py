@@ -89,6 +89,96 @@ def test_all_null_column_is_reported_not_crashed():
     assert result.confidence == 0.0
 
 
+def test_day_first_dates_beat_the_integer_left_by_stripping_the_slashes():
+    """A '30/01/2013' column must not become the integer 30012013.
+
+    DuckDB's native DATE cast only reads ISO ordering, so the raw counts are
+    zero and the numeric cleaner - which strips '/' - is the only other reading
+    that parses the whole column.
+    """
+    result = resolve_type(
+        column="Review Date",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={},
+        cleaned_castable={T.INTEGER: 100, T.NUMERIC: 100},
+        format_castable={"%d/%m/%Y": 100},
+    )
+    assert result.inferred_type == T.DATE
+    assert result.date_format == "%d/%m/%Y"
+    assert result.confidence == 1.0
+    assert result.requires_conversion is True
+    assert result.day_month_ambiguous is False
+
+
+def test_a_genuine_number_column_is_not_stolen_by_the_date_branch():
+    result = resolve_type(
+        column="revenue",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={T.INTEGER: 100, T.NUMERIC: 100},
+        format_castable={},
+    )
+    assert result.inferred_type == T.INTEGER
+    assert result.date_format is None
+
+
+def test_iso_dates_keep_the_native_cast_rather_than_a_format():
+    result = resolve_type(
+        column="order_date",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={T.DATE: 100},
+        format_castable={"%Y-%m-%d": 100},
+    )
+    assert result.inferred_type == T.DATE
+    assert result.date_format is None
+
+
+def test_datetime_format_resolves_to_datetime_not_date():
+    result = resolve_type(
+        column="created",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={},
+        format_castable={"%d/%m/%Y %H:%M:%S": 100},
+    )
+    assert result.inferred_type == T.DATETIME
+    assert result.date_format == "%d/%m/%Y %H:%M:%S"
+
+
+def test_wholly_ambiguous_day_month_column_is_flagged():
+    """Every day-of-month <= 12, so both orderings parse and one is a guess."""
+    result = resolve_type(
+        column="Review Date",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={},
+        format_castable={"%d/%m/%Y": 100, "%m/%d/%Y": 100},
+    )
+    assert result.inferred_type == T.DATE
+    assert result.day_month_ambiguous is True
+
+
+def test_a_mostly_broken_date_column_still_loses_to_a_clean_number():
+    """The temporal override only applies above the acceptance floor."""
+    result = resolve_type(
+        column="mixed",
+        raw_type="VARCHAR",
+        non_null_count=100,
+        null_count=0,
+        raw_castable={},
+        cleaned_castable={T.INTEGER: 100},
+        format_castable={"%d/%m/%Y": 40},
+    )
+    assert result.inferred_type == T.INTEGER
+
+
 def test_confidence_labels():
     assert confidence_label(1.0) == "high"
     assert confidence_label(0.99) == "high"

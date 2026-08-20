@@ -1,0 +1,11 @@
+order_date,region,product,channel,revenue
+2026-06-15,Cairo,A,Direct,30000
+2026-06-15,Cairo,B,Direct,20000
+2026-06-15,Giza,A,Direct,30000
+2026-06-15,Alexandria,B,Partner,20000
+2026-06-15,Luxor,A,Partner,6000
+2026-07-15,Cairo,A,Direct,16000
+2026-07-15,Cairo,B,Direct,20000
+2026-07-15,Giza,A,Direct,30000
+2026-07-15,Alexandria,B,Partner,20000
+2026-07-15,Aswan,B,Partner,4000

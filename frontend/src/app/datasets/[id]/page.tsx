@@ -1,4 +1,4 @@
-import { BarChart3, Table2 } from "lucide-react";
+import { BarChart3, LineChart, Table2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -13,6 +13,7 @@ import {
   ValidationPill,
 } from "@/components/ui";
 import { DatasetStatusWatcher } from "@/features/datasets/dataset-status-watcher";
+import { DeleteDatasetButton } from "@/features/datasets/delete-dataset-button";
 import { getDataset, getProfile, getValidation } from "@/lib/api/datasets";
 import { ApiError } from "@/lib/api/errors";
 import { formatBytes, formatDate, formatNumber, formatPercent } from "@/lib/format";
@@ -53,9 +54,24 @@ export default async function DatasetDetailPage({
             <Link className="btn btn-secondary" href={`/datasets/${id}/profile`}>
               <Table2 size={16} /> View profile
             </Link>
-            <Link className="btn" href={`/datasets/${id}/kpi`}>
+            <Link
+              className={dataset.analysis_ready ? "btn btn-secondary" : "btn"}
+              href={`/datasets/${id}/kpi`}
+            >
               <BarChart3 size={16} /> KPI setup
             </Link>
+            {dataset.analysis_ready ? (
+              <Link className="btn" href={`/investigations/${id}`}>
+                <LineChart size={16} /> Run analysis
+              </Link>
+            ) : null}
+            {/* Leaves the page it was deleted from, so nothing 404s on refresh. */}
+            <DeleteDatasetButton
+              datasetId={id}
+              name={dataset.name}
+              redirectTo="/datasets"
+              status={dataset.status}
+            />
           </>
         }
       />
@@ -77,7 +93,9 @@ export default async function DatasetDetailPage({
 
       {dataset.analysis_ready ? (
         <Alert tone="success" title="Analysis Ready">
-          A KPI definition is configured. This dataset can be handed to the RCA engine.
+          A KPI definition is configured.{" "}
+          <Link href={`/investigations/${id}`}>Run a root cause analysis</Link> to see which segments
+          drove its most recent change.
         </Alert>
       ) : null}
 
@@ -148,6 +166,10 @@ export default async function DatasetDetailPage({
             <li>
               Configure a <Link href={`/datasets/${id}/kpi`}>KPI</Link> to make the dataset
               Analysis Ready.
+            </li>
+            <li>
+              <Link href={`/investigations/${id}`}>Run a root cause analysis</Link> to find the
+              segments behind the KPI&rsquo;s change.
             </li>
           </ol>
         </Panel>

@@ -168,48 +168,18 @@ def preview_dataset(
     db: Session = Depends(get_db),
     ctx: RequestContext = Depends(get_current_context),
 ) -> PreviewRead:
-    from app.analysis.duckdb_session import duckdb_connection, source_relation
-    from app.db.models.enums import FileFormat
-    from app.services.materialize import excel_to_parquet
-    from app.services.storage_service import get_storage
+    # Imported here because it pulls in DuckDB and pyarrow.
+    from app.services.dataset_source import preview_rows
 
     dataset = dataset_service.get_dataset(db, dataset_id, ctx.company_id)
-    if not dataset.storage_key:
-        raise NotReadyError("This dataset has no stored data yet.", code="DATA_NOT_READY")
-
-    storage = get_storage()
-    key = dataset.normalized_key or dataset.storage_key
-    read_format = (
-        FileFormat.PARQUET.value if dataset.normalized_key else dataset.file_format
+    columns, rows = preview_rows(dataset, limit=limit, offset=offset)
+    return PreviewRead(
+        columns=[PreviewColumn(name=name, type=type_) for name, type_ in columns],
+        rows=rows,
+        total_rows=dataset.row_count,
+        limit=limit,
+        offset=offset,
     )
-
-    temp = None
-    try:
-        with storage.as_local_file(key) as path:
-            read_path = path
-            if read_format == FileFormat.XLSX.value:
-                from app.services.materialize import temp_path
-
-                temp = temp_path(".parquet")
-                excel_to_parquet(path, temp)
-                read_path, read_format = temp, FileFormat.PARQUET.value
-
-            with duckdb_connection() as conn:
-                relation = source_relation(read_path, read_format)
-                described = conn.execute(f"DESCRIBE SELECT * FROM {relation}").fetchall()
-                rows = conn.execute(
-                    f"SELECT * FROM {relation} LIMIT {limit} OFFSET {offset}"
-                ).fetchall()
-        return PreviewRead(
-            columns=[PreviewColumn(name=row[0], type=row[1]) for row in described],
-            rows=[[None if value is None else str(value) for value in row] for row in rows],
-            total_rows=dataset.row_count,
-            limit=limit,
-            offset=offset,
-        )
-    finally:
-        if temp is not None:
-            temp.unlink(missing_ok=True)
 
 
 # --- profile -------------------------------------------------------------
