@@ -204,24 +204,27 @@ document visibility and stops at a 10-minute deadline. The profile tabs are clie
 
 ```
 backend/app/
-  api/routes/     context, uploads, datasets, sql_connections, sql_editor, rca
+  api/routes/     context, uploads, datasets, sql_connections, sql_editor, rca, anomalies
   api/deps.py     get_db, get_current_context   ← the single auth seam
   core/           config, security, logging, exceptions, middleware
   db/models/      company, user, dataset, profile, validation, kpi, sql_connection, enums
   db/migrations/  0001 initial schema · 0002 seed default context
   schemas/        Pydantic request/response contracts
   services/       dataset, dataset_source, profiling, validation, kpi, sql, storage, jobs,
-                  materialize, rca
+                  materialize, rca, anomaly
   analysis/       duckdb_session, type_inference, profiler, kpi_heuristics   (pure, no DB)
   analysis/rca/   constants, models, casting, period_analysis, dimension_analysis,
                   contribution, ranking, tree, engine                       (pure, no DB)
+  analysis/anomaly/ constants, models, baseline, scoring, detectors, series,
+                  engine                                                    (pure, no DB)
   storage/        base (abstraction) + local
   connectors/     sqlserver, sql_guard
 frontend/src/
   app/            routes
   components/     ui primitives + layout
-  features/       datasets (upload, profile, kpi), sql-editor, rca
-  lib/api/        typed client: base-url, http, errors, datasets, sql, uploads, rca
+  features/       datasets (upload, profile, kpi), sql-editor, rca, anomaly
+  lib/api/        typed client: base-url, http, errors, datasets, sql, uploads, rca,
+                  anomaly
   styles/         tokens, base, components
 docker/nginx/
 docs/             database-erd.pdf
@@ -432,6 +435,9 @@ POST   /api/sql/connections/{id}/execute
 POST   /api/sql/connections/{id}/save-as-dataset
 
 POST   /api/rca/investigations                        {dataset_id, kpi_definition_id?} -> 200
+DELETE /api/rca/investigations/{dataset_id}           discards the KPI behind it -> 204
+
+POST   /api/anomalies/detections                      {dataset_id, grain?, method?} -> 200
 ```
 
 `POST /api/rca/investigations` returns 200 rather than 201: it is stateless and creates nothing.
@@ -443,3 +449,19 @@ that are not errors at all arrive as `state` (`no_data`, `no_previous_period`, `
 
 **Wording is deliberate:** *driver*, *contributor*, *contribution*, *offsetting factor* — never
 *cause*. The engine measures which segments moved with the KPI, not why they moved.
+
+`POST /api/anomalies/detections` answers the question that comes *before* an investigation: is this
+KPI behaving unusually against its own history? It builds the KPI time series at the profiled
+reporting grain, learns a trailing baseline (median + MAD over the previous 12 periods) and scores
+each period with the modified z-score `0.6745 * (actual - median) / MAD`, so the score reads as
+robust standard deviations from normal and `3.5` is the published Iglewicz & Hoaglin cutoff. Every
+threshold lives in `app/analysis/anomaly/constants.py` with its justification, and the response
+echoes the ones it used.
+
+Three distinctions the engine refuses to blur: a period with **no rows** is `MISSING`, never zero;
+a **boundary period still being collected** is `PARTIAL` and never scored, because a half-collected
+month is indistinguishable from a collapse; and a period with **too little history behind it** is
+`INSUFFICIENT_HISTORY`, which is not the same claim as *normal*. It reports what it cannot see
+(`limitations`) alongside what it found, and warns when the model does not fit the series at all —
+a KPI with a weekly cycle flags every weekend, and `HIGH_ANOMALY_RATE` says so rather than handing
+back fifty Saturdays.

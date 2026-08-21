@@ -73,6 +73,13 @@ class Settings(BaseSettings):
     # a separate, smaller limit in app.analysis.rca.constants.
     rca_max_segments_scanned: int = 5_000
 
+    # --- anomaly detection -----------------------------------------------
+    # Safety cap on the number of calendar periods one series may span. A daily
+    # KPI over twenty years is ~7,300 points; past this the grain is almost
+    # certainly mis-detected. Statistical thresholds are not tunable here - they
+    # live in app.analysis.anomaly.constants where they can be justified.
+    anomaly_max_periods: int = 5_000
+
     # --- secrets ---------------------------------------------------------
     encryption_key: SecretStr | None = None
     encryption_keys_legacy: list[str] = []

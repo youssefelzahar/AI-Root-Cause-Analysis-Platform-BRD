@@ -1,12 +1,15 @@
 "use client";
 
-import { Brain, Database, LineChart, Server } from "lucide-react";
+import { Activity, Brain, Database, LineChart, Server } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/datasets", label: "Datasets", icon: Database },
   { href: "/sql", label: "SQL Server", icon: Server },
+  // Anomalies before investigations: "is this unusual?" is the question that
+  // comes before "why did it change?".
+  { href: "/anomalies", label: "Anomalies", icon: Activity },
   { href: "/investigations", label: "Investigations", icon: LineChart },
 ];
 

@@ -2,7 +2,15 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import context, datasets, rca, sql_connections, sql_editor, uploads
+from app.api.routes import (
+    anomalies,
+    context,
+    datasets,
+    rca,
+    sql_connections,
+    sql_editor,
+    uploads,
+)
 
 api_router = APIRouter()
 api_router.include_router(context.router)
@@ -11,3 +19,4 @@ api_router.include_router(datasets.router)
 api_router.include_router(sql_connections.router)
 api_router.include_router(sql_editor.router)
 api_router.include_router(rca.router)
+api_router.include_router(anomalies.router)

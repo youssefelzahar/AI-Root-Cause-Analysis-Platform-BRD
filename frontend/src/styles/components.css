@@ -1040,3 +1040,155 @@
   gap: var(--space-2);
   justify-content: flex-end;
 }
+
+/* -------------------------------------------------------------- anomaly */
+/* The app's only SVG chart. A connected line is the one shape the DOM-and-
+   percentage-width approach used elsewhere cannot express. */
+.anomaly-chart {
+  margin-top: var(--space-4);
+}
+
+.anomaly-chart-svg {
+  display: block;
+  /* Fixed viewBox scaled by width, so stroke widths stay even. Deliberately
+     not preserveAspectRatio="none", which stretches them. */
+  height: auto;
+  overflow: visible;
+  width: 100%;
+}
+
+.anomaly-grid {
+  stroke: var(--line);
+  stroke-dasharray: 2 4;
+  stroke-width: 1;
+}
+
+.anomaly-axis-label {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: end;
+}
+
+.anomaly-axis-end {
+  text-anchor: end;
+}
+
+.anomaly-chart-svg text:first-of-type {
+  text-anchor: start;
+}
+
+/* The band is the baseline plus/minus the anomaly threshold: inside it, a point
+   is ordinary by definition. */
+.anomaly-band {
+  fill: var(--teal-bg);
+  stroke: none;
+}
+
+.anomaly-baseline {
+  fill: none;
+  stroke: var(--teal);
+  stroke-dasharray: 4 3;
+  stroke-width: 1.5;
+}
+
+.anomaly-series {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.anomaly-dot {
+  fill: var(--ink);
+}
+
+/* Hollow, so a period nothing could be said about is never read as a clean one. */
+.anomaly-dot-unscored {
+  fill: var(--surface);
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.anomaly-dot-flagged {
+  fill: var(--red);
+}
+
+/* A second channel besides colour. */
+.anomaly-dot-ring {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1.5;
+}
+
+.anomaly-gap {
+  stroke: var(--line);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.anomaly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.anomaly-legend li {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  gap: var(--space-2);
+}
+
+.anomaly-key {
+  border-radius: 2px;
+  display: inline-block;
+  height: 10px;
+  width: 16px;
+}
+
+.anomaly-key-series {
+  background: var(--ink);
+  height: 3px;
+}
+
+.anomaly-key-baseline {
+  background: var(--teal);
+  height: 3px;
+}
+
+.anomaly-key-band {
+  background: var(--teal-bg);
+  border: 1px solid var(--teal);
+  height: 12px;
+}
+
+.anomaly-key-flagged {
+  background: var(--red);
+  border-radius: 50%;
+  height: 10px;
+  width: 10px;
+}
+
+.anomaly-key-unscored {
+  background: var(--surface);
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  height: 10px;
+  width: 10px;
+}
+
+@media (max-width: 720px) {
+  /* The axis labels collide well before the line becomes unreadable. */
+  .anomaly-axis-label {
+    display: none;
+  }
+
+  .anomaly-legend {
+    gap: var(--space-3);
+  }
+}

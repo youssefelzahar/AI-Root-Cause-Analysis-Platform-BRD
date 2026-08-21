@@ -196,7 +196,7 @@ def _resolve_equal_span(min_ts: datetime, max_ts: datetime) -> PeriodResolution:
     )
 
 
-def _bucket_is_complete(
+def bucket_is_complete(
     max_ts: datetime, bucket_end_exclusive: datetime, detected_frequency: str | None
 ) -> bool:
     """Has the bucket holding the newest row finished being collected?
@@ -240,7 +240,7 @@ def resolve_periods(
     anchor_start = bucket_start(max_ts, grain)
     anchor_end = bucket_end(anchor_start, grain)
 
-    complete = _bucket_is_complete(max_ts, anchor_end, detected_frequency)
+    complete = bucket_is_complete(max_ts, anchor_end, detected_frequency)
     excluded: Period | None = None
 
     current_start = anchor_start

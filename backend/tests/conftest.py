@@ -176,6 +176,16 @@ def rca_messy_csv_bytes() -> bytes:
 
 
 @pytest.fixture
+def anomaly_golden_csv_bytes() -> bytes:
+    """Six steady months and one that collapses to 600.
+
+    The engine has to find the seventh month on its own - no test names it as
+    an input, only as the expected output.
+    """
+    return (FIXTURES / "anomaly_golden.csv").read_bytes()
+
+
+@pytest.fixture
 def clean_csv_bytes() -> bytes:
     return CLEAN_CSV.encode()
 
