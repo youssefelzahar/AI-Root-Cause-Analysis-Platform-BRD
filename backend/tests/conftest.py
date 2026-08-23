@@ -176,6 +176,23 @@ def rca_messy_csv_bytes() -> bytes:
 
 
 @pytest.fixture
+def investigation_airline_csv_bytes() -> bytes:
+    """The section 23 acceptance dataset: Value For Money 65 -> 50.
+
+    22 previous rows and 21 current, engineered so the whole expected answer -
+    -15 at -23.1%, Singapore Airlines as a GONE primary driver at -12 / 80%,
+    five named secondaries, three offsetting factors, and the airline ->
+    sentiment -> cabin hierarchy - is *discovered* rather than asserted. The
+    marginals are re-checked from the file in test_investigation_fixture.py.
+
+    Two distinct dates only, deliberately: with more, the profiler detects a
+    daily frequency and the newest bucket reads as incomplete, which shifts both
+    windows back a month and quietly invalidates every number.
+    """
+    return (FIXTURES / "investigation_airline.csv").read_bytes()
+
+
+@pytest.fixture
 def anomaly_golden_csv_bytes() -> bytes:
     """Six steady months and one that collapses to 600.
 

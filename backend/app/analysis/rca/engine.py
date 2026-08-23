@@ -15,7 +15,6 @@ import duckdb
 from app.analysis.rca import casting, dimension_analysis, period_analysis, ranking, tree
 from app.analysis.rca.constants import (
     ABS_EPSILON,
-    CONTRIBUTION_SUM_TOLERANCE,
     MIN_ROWS_FOR_MEAN_STABILITY,
     OTHER_BUCKET,
 )
@@ -24,6 +23,7 @@ from app.analysis.rca.contribution import (
     build_nodes,
     contribution_sum,
     explanatory_power,
+    gross_movement,
     mark_residual,
     percent_change,
 )
@@ -46,6 +46,7 @@ from app.analysis.rca.models import (
     Totals,
     UnattributableReason,
 )
+from app.analysis.trace import Probe, Purpose, QueryTracer
 from app.core.exceptions import ValidationError
 from app.core.logging import get_logger
 from app.db.models.enums import Aggregation
@@ -53,19 +54,14 @@ from app.db.models.enums import Aggregation
 logger = get_logger(__name__)
 
 
-class _Counter:
-    """Counts statements so the response can report the real query cost."""
-
-    def __init__(self) -> None:
-        self.count = 0
-
-    def execute(self, conn: duckdb.DuckDBPyConnection, sql: str, params: list | None = None):
-        self.count += 1
-        return conn.execute(sql, params) if params else conn.execute(sql)
-
-
-def _describe(conn: duckdb.DuckDBPyConnection, relation: str, counter: _Counter) -> dict[str, str]:
-    rows = counter.execute(conn, f"DESCRIBE SELECT * FROM {relation}").fetchall()
+def _describe(
+    conn: duckdb.DuckDBPyConnection, relation: str, counter: QueryTracer
+) -> dict[str, str]:
+    rows = counter.execute(
+        conn,
+        f"DESCRIBE SELECT * FROM {relation}",
+        purpose=Purpose.DESCRIBE_RELATION,
+    ).fetchall()
     return {row[0]: str(row[1]) for row in rows}
 
 
@@ -141,6 +137,15 @@ def _residual_segment(
     )
 
 
+def _change_sentence(kpi: KpiChange) -> str:
+    """The opening clause: what the KPI did, with no claim about why."""
+    verb = "increased" if (kpi.absolute_change or 0.0) > 0 else "decreased"
+    magnitude = (
+        f" by {abs(kpi.percent_change):.1f}%" if kpi.percent_change is not None else ""
+    )
+    return f"{kpi.name} {verb}{magnitude} versus the previous period."
+
+
 def _summarise(kpi: KpiChange, primary: list[DriverNode], pattern: ChangePattern) -> str:
     """A factual sentence. Contribution to a change, never causation."""
     if kpi.absolute_change is None:
@@ -148,11 +153,7 @@ def _summarise(kpi: KpiChange, primary: list[DriverNode], pattern: ChangePattern
     if abs(kpi.absolute_change) <= ABS_EPSILON:
         return f"{kpi.name} did not change between the two periods."
 
-    verb = "increased" if kpi.absolute_change > 0 else "decreased"
-    magnitude = (
-        f" by {abs(kpi.percent_change):.1f}%" if kpi.percent_change is not None else ""
-    )
-    head = f"{kpi.name} {verb}{magnitude} versus the previous period."
+    head = _change_sentence(kpi)
 
     if pattern is ChangePattern.BROAD_BASED:
         return f"{head} The change is broad-based: no dimension concentrates it."
@@ -169,10 +170,20 @@ def run_investigation(
     conn: duckdb.DuckDBPyConnection,
     relation: str,
     spec: RcaSpec,
+    *,
+    probe: Probe | None = None,
 ) -> RcaResult:
-    """Execute a full investigation against an open DuckDB relation."""
+    """Execute a full investigation against an open DuckDB relation.
+
+    ``probe`` is an optional out-parameter: pass one to collect the query trace
+    and the decision trace, which the evidence layer needs and the plain RCA
+    endpoint does not. The trace is deliberately not returned on ``RcaResult`` -
+    that would push the SQL text through every existing caller and contradict
+    the lazy-loading the evidence API is built around.
+    """
     started = time.perf_counter()
-    counter = _Counter()
+    probe = probe or Probe()
+    counter = probe.queries
     notices: list[Notice] = []
 
     physical = _describe(conn, relation, counter)
@@ -222,9 +233,14 @@ def run_investigation(
             where_clause=where_clause,
         ),
         filter_params or None,
+        purpose=Purpose.PROJECT_BASE_TABLE,
     )
 
-    bounds = counter.execute(conn, dimension_analysis.build_bounds_sql()).fetchone()
+    bounds = counter.execute(
+        conn,
+        dimension_analysis.build_bounds_sql(),
+        purpose=Purpose.RESOLVE_PERIOD_BOUNDS,
+    ).fetchone()
     min_ts, max_ts, total_rows, parsed_time_rows, parsed_measure_rows = bounds
     total_rows = int(total_rows or 0)
 
@@ -307,6 +323,7 @@ def run_investigation(
     totals_row = counter.execute(
         conn,
         dimension_analysis.build_totals_sql(spec.aggregation, resolution.current, resolution.previous),
+        purpose=Purpose.KPI_PERIOD_TOTALS,
     ).fetchone()
     totals = Totals(
         current_value=float(totals_row[0]) if totals_row[0] is not None else None,
@@ -385,9 +402,11 @@ def run_investigation(
             usable,
             resolution.current,
             resolution.previous,
-            limit=min(spec.max_values_per_dimension, spec.max_segments_scanned),
+            limit=spec.segment_limit,
             dimension_offsets=offsets,
         ),
+        purpose=Purpose.DIMENSION_BREAKDOWN,
+        depth=1,
     ).fetchall()
     by_dimension = _rows_to_segments(rows)
 
@@ -398,6 +417,7 @@ def run_investigation(
             dimension_analysis.build_distinct_overlap_sql(
                 usable[0], offsets[usable[0]], resolution.current, resolution.previous
             ),
+            purpose=Purpose.DISTINCT_OVERLAP_CHECK,
         ).fetchall()
         gaps = {row[0]: int(row[1] or 0) for row in gap_rows}
         overlap_gap = (gaps.get("previous", 0), gaps.get("current", 0))
@@ -435,9 +455,13 @@ def run_investigation(
     dimension_nodes: dict[str, list[DriverNode]] = {}
     summaries: list[DimensionSummary] = list(excluded)
 
+    # Kept so the chosen dimension's gross movement can be threaded into the
+    # drill levels: the residual bucket is appended below, and it counts.
+    level_segments: dict[str, list[SegmentTotals]] = {}
+
     for name in usable:
         segments = by_dimension.get(name, [])
-        truncated = len(segments) >= spec.max_values_per_dimension
+        truncated = len(segments) >= spec.segment_limit
         if truncated:
             residual = _residual_segment(name, segments, totals)
             if residual is not None:
@@ -448,7 +472,7 @@ def run_investigation(
                     "warning",
                     f"{name} has more distinct values than can be listed; the remainder is grouped "
                     f"as {OTHER_BUCKET}.",
-                    {"dimension": name, "listed": spec.max_values_per_dimension},
+                    {"dimension": name, "listed": spec.segment_limit},
                 )
             )
         nodes = build_nodes(
@@ -458,6 +482,7 @@ def run_investigation(
             if node.value == OTHER_BUCKET:
                 mark_residual(node)
         dimension_nodes[name] = nodes
+        level_segments[name] = segments
         summaries.append(
             DimensionSummary(
                 dimension=name,
@@ -487,7 +512,19 @@ def run_investigation(
     best_power = max(powers) if powers else None
 
     choice = tree.select_dimension(dimension_nodes, global_change, tuple(usable))
-    root = tree.synthetic_root(totals.current_value, totals.previous_value, global_change)
+
+    # Under gross movement the children are shares of sum|delta|, so their signed
+    # sum is net/gross rather than 1. The root has to carry that same number or
+    # the tree reports drift at depth 0 on every gross-movement investigation.
+    gross_denominator: float | None = None
+    root_share: float | None = None
+    if choice is not None and basis is AttributionBasis.GROSS_MOVEMENT:
+        gross_denominator = gross_movement(level_segments[choice.dimension])
+        root_share = sum(n.contribution for n in choice.nodes if n.contribution is not None)
+
+    root = tree.synthetic_root(
+        totals.current_value, totals.previous_value, global_change, contribution=root_share
+    )
 
     primary: list[DriverNode] = []
     secondary: list[DriverNode] = []
@@ -515,6 +552,7 @@ def run_investigation(
             tuple(usable),
             tree.frontier_for(choice.nodes, 1),
             choice.dimension,
+            gross_denominator,
         )
 
     if primary and all(node.low_support for node in primary):
@@ -569,7 +607,7 @@ def run_investigation(
             **evidence_base,
             statements_executed=counter.count,
             duration_ms=duration_ms,
-            contribution_sum=contribution_sum(dimension_nodes.get(usable[0], [])),
+            contribution_sum=contribution_sum(dimension_nodes.get(usable[0], []), basis=basis),
         ),
         notices=tuple(notices),
         summary=_summarise(kpi, primary, pattern),
@@ -578,7 +616,7 @@ def run_investigation(
 
 def _drill(
     conn: duckdb.DuckDBPyConnection,
-    counter: _Counter,
+    counter: QueryTracer,
     spec: RcaSpec,
     resolution: PeriodResolution,
     totals: Totals,
@@ -589,6 +627,7 @@ def _drill(
     all_dimensions: tuple[str, ...],
     frontier: list[DriverNode],
     used_dimension: str,
+    gross_denominator: float | None = None,
 ) -> None:
     """Descend the strongest path, one statement per node.
 
@@ -627,11 +666,14 @@ def _drill(
                     list(remaining),
                     resolution.current,
                     resolution.previous,
-                    limit=spec.max_values_per_dimension,
+                    limit=spec.segment_limit,
                     parent_predicates=predicates,
                     dimension_offsets=offsets,
                 ),
                 params or None,
+                purpose=Purpose.DRILLDOWN_BREAKDOWN,
+                depth=node.depth + 1,
+                node_id=node.node_id,
             ).fetchall()
 
             child_segments = _rows_to_segments(rows)
@@ -647,6 +689,7 @@ def _drill(
                     depth=node.depth + 1,
                     parent_path=node.path,
                     parent_change=node.absolute_change,
+                    gross_denominator=gross_denominator,
                 )
 
             choice = tree.select_dimension(candidates, node.absolute_change, remaining)
@@ -722,7 +765,7 @@ def _attribution(
 
 
 def _no_time_column_result(
-    spec: RcaSpec, notices: list[Notice], counter: _Counter, started: float
+    spec: RcaSpec, notices: list[Notice], counter: QueryTracer, started: float
 ) -> RcaResult:
     notices.append(
         Notice(
@@ -751,7 +794,7 @@ def _empty_result(
     spec: RcaSpec,
     state: AnalysisState,
     notices: list[Notice],
-    counter: _Counter,
+    counter: QueryTracer,
     started: float,
     **evidence: int,
 ) -> RcaResult:
@@ -772,13 +815,40 @@ def _empty_result(
     )
 
 
+def _descriptive_summary(spec: RcaSpec, state: AnalysisState, kpi: KpiChange) -> str:
+    """The sentence for a result that carries numbers but names no driver.
+
+    ``_summarise`` cannot be reused wholesale here. ``Totals.absolute_change``
+    reads a missing previous period as ``current - 0``, so its generic path
+    reports that the KPI "increased versus the previous period" when there is no
+    previous period at all. And "no individual segment accounts for a material
+    share" asserts that contributions were computed and came back empty, which
+    is not what happened for a non-decomposable aggregation - there, nothing was
+    computed - nor for a KPI with no dimensions to compute over.
+    """
+    if state is AnalysisState.NO_PREVIOUS_PERIOD:
+        return f"{kpi.name} has no earlier period in this dataset to compare against."
+    if kpi.absolute_change is None:
+        return f"{kpi.name} could not be compared across periods."
+    if abs(kpi.absolute_change) <= ABS_EPSILON:
+        return f"{kpi.name} did not change between the two periods."
+
+    head = _change_sentence(kpi)
+    if state is AnalysisState.UNATTRIBUTABLE:
+        return (
+            f"{head} A {spec.aggregation.value} cannot be split across segments, so no "
+            "contribution is reported."
+        )
+    return f"{head} This KPI has no analysis dimensions, so no drivers were identified."
+
+
 def _descriptive_result(
     spec: RcaSpec,
     state: AnalysisState,
     kpi: KpiChange,
     resolution: PeriodResolution,
     notices: list[Notice],
-    counter: _Counter,
+    counter: QueryTracer,
     started: float,
     reason: UnattributableReason | None,
     evidence: dict[str, int],
@@ -811,23 +881,31 @@ def _descriptive_result(
             duration_ms=int((time.perf_counter() - started) * 1000),
         ),
         notices=tuple(notices),
-        summary=_summarise(kpi, [], ChangePattern.NONE),
+        summary=_descriptive_summary(spec, state, kpi),
     )
 
 
 def verify_tree(node: DriverNode) -> None:
-    """Assert that children sum to their parent, at every level.
+    """Audit that children sum to their parent, at every level.
 
-    This is the tree's correctness contract. A plain ``assert`` would be
-    stripped under ``-O``, so it raises explicitly.
+    Logs rather than raises, deliberately. Two legitimate results drift: a drill
+    level truncated past ``segment_limit`` loses the remainder with no residual
+    bucket to hold it, and a pure split carries a child that cannot be scored by
+    deviation-from-proportional. Raising would turn a usable, correctly-caveated
+    investigation into a 500, and the drift is already on the wire twice - as
+    ``evidence.contribution_sum`` and as per-node ``unexplained_share``. What the
+    log is for is the third case: a genuine lost-rows bug.
+
+    The walk itself lives in ``tree.tree_drift`` so the evidence validator can
+    reach the same verdict from the same code rather than reimplementing it.
     """
-    if node.children:
-        total = sum(c.contribution for c in node.children if c.contribution is not None)
-        parent = node.contribution
-        if parent is not None and abs(total - parent) > CONTRIBUTION_SUM_TOLERANCE:
-            logger.warning(
-                "rca_tree_contribution_drift",
-                extra={"node": node.node_id, "parent": parent, "children": total},
-            )
-        for child in node.children:
-            verify_tree(child)
+    for drift in tree.tree_drift(node):
+        logger.warning(
+            "rca_tree_contribution_drift",
+            extra={
+                "node": drift.node_id,
+                "parent": drift.parent_contribution,
+                "children": drift.children_sum,
+                "pure_split": drift.is_pure_split,
+            },
+        )

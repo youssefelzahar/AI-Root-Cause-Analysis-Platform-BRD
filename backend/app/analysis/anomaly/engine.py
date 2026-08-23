@@ -40,6 +40,7 @@ from app.analysis.anomaly.models import (
 from app.analysis.rca.casting import measure_expression, time_expression
 from app.analysis.rca.models import Grain
 from app.analysis.rca.period_analysis import bucket_end, bucket_start, shift_bucket
+from app.analysis.trace import Probe, Purpose, QueryTracer
 from app.core.exceptions import ValidationError
 from app.core.logging import get_logger
 
@@ -60,19 +61,19 @@ LIMITATIONS = (
 )
 
 
-class _Counter:
-    """Counts statements so the report can say what it cost."""
+def _describe(
+    conn: duckdb.DuckDBPyConnection, relation: str, counter: QueryTracer
+) -> dict[str, str]:
+    """The relation's physical types.
 
-    def __init__(self) -> None:
-        self.count = 0
-
-    def execute(self, conn: duckdb.DuckDBPyConnection, sql: str, params: list | None = None):  # noqa: ANN201
-        self.count += 1
-        return conn.execute(sql, params) if params else conn.execute(sql)
-
-
-def _describe(conn: duckdb.DuckDBPyConnection, relation: str) -> dict[str, str]:
-    rows = conn.execute(f"DESCRIBE SELECT * FROM {relation}").fetchall()
+    Routed through the tracer like every other statement. It used to bypass the
+    counter, which made ``statements_executed`` under-report by one.
+    """
+    rows = counter.execute(
+        conn,
+        f"DESCRIBE SELECT * FROM {relation}",
+        purpose=Purpose.DESCRIBE_RELATION,
+    ).fetchall()
     return {row[0]: str(row[1]) for row in rows}
 
 
@@ -92,7 +93,7 @@ def _require_column(physical: dict[str, str], column: str, role: str) -> str:
 
 
 def _empty_report(spec: AnomalySpec, status: ReportStatus, notices: list[Notice],
-                  counter: _Counter, started: float, evidence: Evidence | None = None) -> AnomalyReport:
+                  counter: QueryTracer, started: float, evidence: Evidence | None = None) -> AnomalyReport:
     return AnomalyReport(
         status=status,
         kpi_name=spec.kpi_name,
@@ -173,10 +174,17 @@ def detect_anomalies(
     conn: duckdb.DuckDBPyConnection,
     relation: str,
     spec: AnomalySpec,
+    *,
+    probe: Probe | None = None,
 ) -> AnomalyReport:
-    """Build the KPI's history and judge every period in it."""
+    """Build the KPI's history and judge every period in it.
+
+    ``probe`` is the same optional out-parameter ``rca.engine`` takes, so an
+    investigation that runs both engines collects one continuous query trace.
+    """
     started = time.perf_counter()
-    counter = _Counter()
+    probe = probe or Probe()
+    counter = probe.queries
     notices: list[Notice] = []
 
     if not spec.time_column:
@@ -220,7 +228,7 @@ def detect_anomalies(
             )
         )
 
-    physical = _describe(conn, relation)
+    physical = _describe(conn, relation, counter)
     time_type = _require_column(physical, spec.time_column, "time")
     time_expr = time_expression(spec.time_column, time_type)
     if not time_expr:
@@ -247,10 +255,11 @@ def detect_anomalies(
             relation, time_expr=time_expr, measure_expr=measure_expr, where_clause=where_clause
         ),
         params or None,
+        purpose=Purpose.SERIES_BASE_TABLE,
     )
 
     total_rows, parsed_time, parsed_measure, min_ts, _max_ts = counter.execute(
-        conn, series.build_bounds_sql()
+        conn, series.build_bounds_sql(), purpose=Purpose.SERIES_BOUNDS
     ).fetchone()
     total_rows = int(total_rows or 0)
     unparsed_time = total_rows - int(parsed_time or 0)
@@ -298,7 +307,9 @@ def detect_anomalies(
         )
 
     rows = counter.execute(
-        conn, series.build_series_sql(spec.aggregation, spec.grain, limit=spec.max_periods)
+        conn,
+        series.build_series_sql(spec.aggregation, spec.grain, limit=spec.max_periods),
+        purpose=Purpose.SERIES_AGGREGATE,
     ).fetchall()
     raw = [(row[0], _clean(row[1]), int(row[2] or 0)) for row in rows]
 

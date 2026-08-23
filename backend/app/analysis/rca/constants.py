@@ -67,12 +67,11 @@ MIN_ROWS_TO_DRILL = 10
 
 # --- truncation -------------------------------------------------------------
 
-# A display bound, not a statistical one: past ~50 rows no dimension table is
-# legible. The residual bucket keeps the arithmetic exact regardless.
-MAX_VALUES_PER_DIMENSION = 50
-
-# Safety cap on rows pulled back from one breakdown query.
-MAX_SEGMENTS_SCANNED = 5_000
+# Neither truncation limit lives here. Both are display and operator bounds
+# rather than statistical ones, so Settings owns them as
+# RCA_MAX_VALUES_PER_DIMENSION and RCA_MAX_SEGMENTS_SCANNED; the engine applies
+# the lower of the two as RcaSpec.segment_limit. The residual bucket below keeps
+# the arithmetic exact whatever they are set to.
 
 # Label for the synthetic bucket holding everything past the truncation limit.
 OTHER_BUCKET = "(other)"

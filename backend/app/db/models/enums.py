@@ -108,6 +108,140 @@ class ComparisonPeriod(str, Enum):
     CUSTOM = "custom"
 
 
+class InvestigationStatus(str, Enum):
+    """Lifecycle of one persisted investigation.
+
+    PARTIAL is not a failure: the decomposition succeeded but a planned step was
+    skipped or degraded, and the limitations say which. FAILED means there is no
+    result at all.
+    """
+
+    PLANNED = "planned"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    FAILED = "failed"
+
+    @classmethod
+    def terminal(cls) -> set["InvestigationStatus"]:
+        return {cls.COMPLETED, cls.PARTIAL, cls.FAILED}
+
+
+class EvidenceType(str, Enum):
+    """What kind of claim one evidence record makes."""
+
+    KPI_CHANGE = "kpi_change"
+    DIMENSION_CHANGE = "dimension_change"
+    CONTRIBUTION = "contribution"
+    DRILL_DOWN = "drill_down"
+    ANOMALY = "anomaly"
+    TREND = "trend"
+    COMPARISON = "comparison"
+    VALIDATION = "validation"
+    NEW_SEGMENT = "new_segment"
+    GONE_SEGMENT = "gone_segment"
+    OFFSETTING_FACTOR = "offsetting_factor"
+    EXECUTION = "execution"
+    COVERAGE = "coverage"
+    RECONCILIATION = "reconciliation"
+
+
+class EvidenceValidationStatus(str, Enum):
+    """Whether one record survived the validator.
+
+    The builder emits UNVERIFIED; the validator pass promotes or demotes it, so
+    a record left UNVERIFIED means the validator never reached it.
+    """
+
+    VALIDATED = "validated"
+    UNVERIFIED = "unverified"
+    FAILED = "failed"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class EvidenceConfidence(str, Enum):
+    """How much weight one record's number deserves."""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class EvidenceQuality(str, Enum):
+    """The verdict on whether an analysis is well-formed and traceable.
+
+    Deliberately not ``ValidationState``: that one judges a dataset's schema,
+    this one judges whether an analytical claim can be trusted. Same subject
+    separation as ``anomaly.models.Severity`` not reusing ``rca.ranking``'s.
+    """
+
+    VALIDATED = "validated"
+    WARNING = "warning"
+    FAILED = "failed"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class QualityCheckStatus(str, Enum):
+    """One of the six evidence-quality checks."""
+
+    PASSED = "passed"
+    WARNING = "warning"
+    FAILED = "failed"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class ReconciliationStatus(str, Enum):
+    """Whether the complete decomposition accounts for the whole movement.
+
+    NOT_APPLICABLE is load-bearing: a MEDIAN cannot be decomposed at all, and a
+    missing decomposition is not a failed one.
+    """
+
+    PASSED = "passed"
+    FAILED = "failed"
+    NOT_APPLICABLE = "not_applicable"
+
+
+class TreeDriftStatus(str, Enum):
+    """Whether the drill-down tree's children sum to their parents.
+
+    Three states because two causes of drift are legitimate - a truncated level
+    and a pure split - and only the third is a lost-rows bug.
+    """
+
+    PASSED = "passed"
+    DRIFT_EXPLAINED = "drift_explained"
+    DRIFT_UNEXPLAINED = "drift_unexplained"
+
+
+class AuditEventType(str, Enum):
+    """What happened during an investigation, in order."""
+
+    INVESTIGATION_STARTED = "investigation_started"
+    PERIODS_RESOLVED = "periods_resolved"
+    KPI_CALCULATED = "kpi_calculated"
+    DIMENSION_ANALYSIS_EXECUTED = "dimension_analysis_executed"
+    CONTRIBUTOR_SELECTED = "contributor_selected"
+    DRILLDOWN_EXECUTED = "drilldown_executed"
+    DRILLDOWN_STOPPED = "drilldown_stopped"
+    ANOMALY_DETECTION_EXECUTED = "anomaly_detection_executed"
+    ANOMALY_DETECTION_SKIPPED = "anomaly_detection_skipped"
+    EVIDENCE_BUILT = "evidence_built"
+    EVIDENCE_VALIDATED = "evidence_validated"
+    RECONCILIATION_PASSED = "reconciliation_passed"
+    RECONCILIATION_FAILED = "reconciliation_failed"
+    INVESTIGATION_COMPLETED = "investigation_completed"
+    INVESTIGATION_PARTIAL = "investigation_partial"
+    INVESTIGATION_FAILED = "investigation_failed"
+
+
+class QueryStatus(str, Enum):
+    """Whether one traced statement ran."""
+
+    OK = "ok"
+    FAILED = "failed"
+
+
 NUMERIC_TYPES = {InferredType.INTEGER, InferredType.NUMERIC}
 TEMPORAL_TYPES = {InferredType.DATE, InferredType.DATETIME}
 

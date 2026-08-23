@@ -124,6 +124,12 @@ def build_breakdown_sql(
 
     NULL (segment absent) stays distinguishable from 0 (present, measured zero),
     so new/lost detection reads row counts rather than a falsy value.
+
+    The trailing ORDER BY is load-bearing, not cosmetic. QUALIFY decides *which*
+    rows survive, not the order they arrive in, and every consumer downstream
+    sorts stably - so without it two identical requests can disagree on which of
+    several tied segments headlines the summary and which three the tree
+    descends into.
     """
     offsets = dimension_offsets or {name: i for i, name in enumerate(dimensions)}
     agg = aggregate_expression(aggregation, "m")
@@ -166,22 +172,7 @@ QUALIFY row_number() OVER (
     PARTITION BY dim
     ORDER BY abs(coalesce(current_value, 0) - coalesce(previous_value, 0)) DESC, seg
 ) <= {int(limit)}
-""".strip()
-
-
-def build_segment_count_sql(dimensions: list[str], dimension_offsets: dict[str, int]) -> str:
-    """True cardinality per dimension, used only when truncation fires."""
-    branches = [
-        f"    SELECT {quote_literal(name)} AS dim, "
-        f"{dimension_alias(dimension_offsets[name])} AS seg FROM {BASE_TABLE}"
-        for name in dimensions
-    ]
-    unpivoted = "\n    UNION ALL\n".join(branches)
-    return f"""
-WITH unpivoted AS (
-{unpivoted}
-)
-SELECT dim, count(DISTINCT seg) AS segment_count FROM unpivoted GROUP BY dim
+ORDER BY dim, abs(coalesce(current_value, 0) - coalesce(previous_value, 0)) DESC, seg
 """.strip()
 
 

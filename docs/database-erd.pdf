@@ -4,10 +4,10 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+<< /Type /Pages /Kids [3 0 R 5 0 R 7 0 R] /Count 3 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1560 940] /Resources << /Font << /F1 7 0 R /F2 8 0 R /F3 9 0 R >> >> /Contents 4 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1560 940] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 4 0 R >>
 endobj
 4 0 obj
 << /Length 36699 >>
@@ -967,7 +967,7 @@ BT /F1 6.80 Tf 0.420 0.460 0.520 rg 420.34 34.00 Td (denormalised / cross-cuttin
 endstream
 endobj
 5 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1560 940] /Resources << /Font << /F1 7 0 R /F2 8 0 R /F3 9 0 R >> >> /Contents 6 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1560 940] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
 << /Length 6031 >>
@@ -1056,28 +1056,611 @@ BT /F3 7.40 Tf 0.420 0.460 0.520 rg 40.00 34.00 Td (Source of truth: backend/app
 endstream
 endobj
 7 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1560 940] /Resources << /Font << /F1 9 0 R /F2 10 0 R /F3 11 0 R >> >> /Contents 8 0 R >>
 endobj
 8 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+<< /Length 28133 >>
+stream
+1.000 1.000 1.000 rg
+0.00 0.00 1560.00 940.00 re
+f
+BT /F2 19.00 Tf 0.120 0.140 0.170 rg 40.00 894.00 Td (Evidence + Investigation Layer) Tj ET
+BT /F1 9.20 Tf 0.420 0.460 0.520 rg 40.00 876.00 Td (Persisted investigations, structured evidence, query trace and audit trail) Tj ET
+BT /F1 9.00 Tf 0.420 0.460 0.520 rg 1420.11 894.00 Td (4 tables  |  6 foreign keys) Tj ET
+BT /F3 7.60 Tf 0.420 0.460 0.520 rg 1278.32 878.00 Td (generated from backend/app/db/models/investigation.py) Tj ET
+0.780 0.800 0.840 RG
+0.80 w
+[] 0 d
+40.00 864.00 m
+1520.00 864.00 l
+S
+[] 0 d
+0.420 0.460 0.520 RG
+0.90 w
+[] 0 d
+370.00 660.00 m
+430.00 660.00 l
+S
+[] 0 d
+0.420 0.460 0.520 rg
+372.40 660.00 m
+372.40 661.33 371.33 662.40 370.00 662.40 c
+368.67 662.40 367.60 661.33 367.60 660.00 c
+367.60 658.67 368.67 657.60 370.00 657.60 c
+371.33 657.60 372.40 658.67 372.40 660.00 c
+f
+0.420 0.460 0.520 RG
+0.9 w
+430.00 660.00 m 423.00 656.00 l S
+430.00 660.00 m 423.00 664.00 l S
+430.00 660.00 m 423.00 660.00 l S
+1.000 1.000 1.000 rg
+375.47 656.50 49.07 10.00 re
+f
+BT /F1 6.20 Tf 0.420 0.460 0.520 rg 378.47 659.40 Td (1:N  CASCADE) Tj ET
+0.420 0.460 0.520 RG
+0.90 w
+[] 0 d
+370.00 320.00 m
+795.00 320.00 l
+795.00 734.00 l
+830.00 734.00 l
+S
+[] 0 d
+0.420 0.460 0.520 rg
+372.40 320.00 m
+372.40 321.33 371.33 322.40 370.00 322.40 c
+368.67 322.40 367.60 321.33 367.60 320.00 c
+367.60 318.67 368.67 317.60 370.00 317.60 c
+371.33 317.60 372.40 318.67 372.40 320.00 c
+f
+0.420 0.460 0.520 RG
+0.9 w
+830.00 734.00 m 823.00 730.00 l S
+830.00 734.00 m 823.00 738.00 l S
+830.00 734.00 m 823.00 734.00 l S
+1.000 1.000 1.000 rg
+557.97 316.50 49.07 10.00 re
+f
+BT /F1 6.20 Tf 0.420 0.460 0.520 rg 560.97 319.40 Td (1:N  CASCADE) Tj ET
+0.420 0.460 0.520 RG
+0.90 w
+[] 0 d
+370.00 260.00 m
+812.00 260.00 l
+812.00 520.00 l
+830.00 520.00 l
+S
+[] 0 d
+0.420 0.460 0.520 rg
+372.40 260.00 m
+372.40 261.33 371.33 262.40 370.00 262.40 c
+368.67 262.40 367.60 261.33 367.60 260.00 c
+367.60 258.67 368.67 257.60 370.00 257.60 c
+371.33 257.60 372.40 258.67 372.40 260.00 c
+f
+0.420 0.460 0.520 RG
+0.9 w
+830.00 520.00 m 823.00 516.00 l S
+830.00 520.00 m 823.00 524.00 l S
+830.00 520.00 m 823.00 520.00 l S
+1.000 1.000 1.000 rg
+566.47 256.50 49.07 10.00 re
+f
+BT /F1 6.20 Tf 0.420 0.460 0.520 rg 569.47 259.40 Td (1:N  CASCADE) Tj ET
+1.000 1.000 1.000 rg
+0.780 0.800 0.840 RG
+0.70 w
+40.00 132.00 330.00 698.00 re
+B
+0.130 0.290 0.550 rg
+40.00 808.00 330.00 22.00 re
+f
+BT /F2 10.00 Tf 1.000 1.000 1.000 rg 49.00 815.50 Td (investigations) Tj ET
+BT /F1 6.80 Tf 0.880 0.900 0.920 rg 339.46 816.00 Td (52 cols) Tj ET
+BT /F3 6.20 Tf 0.130 0.290 0.550 rg 47.00 799.00 Td (PK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 69.00 799.00 Td (id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 799.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+40.70 782.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 786.00 Td (company_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 786.00 Td (uuid) Tj ET
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 47.00 773.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 69.00 773.00 Td (dataset_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 773.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+40.70 756.00 328.60 13.00 re
+f
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 47.00 760.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 69.00 760.00 Td (kpi_definition_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 760.00 Td (uuid) Tj ET
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 47.00 747.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 69.00 747.00 Td (created_by) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 747.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+40.70 730.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 734.00 Td (question) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 315.92 734.00 Td (varchar\(500\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 721.00 Td (status) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 721.00 Td (varchar\(20\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 704.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 708.00 Td (analysis_state) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 708.00 Td (varchar\(30\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 695.00 Td (kpi_name) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 315.92 695.00 Td (varchar\(150\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 678.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 682.00 Td (measure_column) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 315.92 682.00 Td (varchar\(255\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 669.00 Td (aggregation) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 669.00 Td (varchar\(20\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 652.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 656.00 Td (time_column) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 315.92 656.00 Td (varchar\(255\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 643.00 Td (comparison) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 643.00 Td (varchar\(30\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 626.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 630.00 Td (grain) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 630.00 Td (varchar\(20\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 617.00 Td (max_drivers) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 335.12 617.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+40.70 600.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 604.00 Td (max_tree_depth) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 335.12 604.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 591.00 Td (previous_period_start) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 591.00 Td (timestamptz) Tj ET
+0.972 0.976 0.982 rg
+40.70 574.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 578.00 Td (previous_period_end) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 578.00 Td (timestamptz) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 565.00 Td (current_period_start) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 565.00 Td (timestamptz) Tj ET
+0.972 0.976 0.982 rg
+40.70 548.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 552.00 Td (current_period_end) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 552.00 Td (timestamptz) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 539.00 Td (previous_value) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 539.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+40.70 522.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 526.00 Td (current_value) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 526.00 Td (float) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 513.00 Td (absolute_change) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 513.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+40.70 496.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 500.00 Td (percentage_change) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 500.00 Td (float) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 487.00 Td (change_direction) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 487.00 Td (varchar\(10\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 470.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 474.00 Td (severity) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 474.00 Td (varchar\(10\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 461.00 Td (rows_scanned) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 338.96 461.00 Td (bigint) Tj ET
+0.972 0.976 0.982 rg
+40.70 444.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 448.00 Td (rows_in_previous_period) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 338.96 448.00 Td (bigint) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 435.00 Td (rows_in_current_period) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 338.96 435.00 Td (bigint) Tj ET
+0.972 0.976 0.982 rg
+40.70 418.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 422.00 Td (rows_outside_periods) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 338.96 422.00 Td (bigint) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 409.00 Td (queries_executed) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 335.12 409.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+40.70 392.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 396.00 Td (execution_time_ms) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 335.12 396.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 383.00 Td (contribution_sum) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 383.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+40.70 366.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 370.00 Td (reconciliation_status) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 370.00 Td (varchar\(20\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 357.00 Td (reconciliation_tolerance) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 357.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+40.70 340.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 344.00 Td (tree_drift_status) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 344.00 Td (varchar\(20\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 331.00 Td (evidence_quality) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 331.00 Td (varchar\(20\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 314.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 318.00 Td (evidence_count) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 335.12 318.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 305.00 Td (result) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 305.00 Td (jsonb) Tj ET
+0.972 0.976 0.982 rg
+40.70 288.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 292.00 Td (tree) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 292.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 279.00 Td (decisions) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 279.00 Td (jsonb) Tj ET
+0.972 0.976 0.982 rg
+40.70 262.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 266.00 Td (quality_checks) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 266.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 253.00 Td (limitations) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 253.00 Td (jsonb) Tj ET
+0.972 0.976 0.982 rg
+40.70 236.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 240.00 Td (notices) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 342.80 240.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 227.00 Td (engine_version) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 227.00 Td (varchar\(20\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 210.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 214.00 Td (source_relation) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 214.00 Td (text) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 201.00 Td (started_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 201.00 Td (timestamptz) Tj ET
+0.972 0.976 0.982 rg
+40.70 184.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 188.00 Td (completed_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 188.00 Td (timestamptz) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 175.00 Td (error_code) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 175.00 Td (varchar\(50\)) Tj ET
+0.972 0.976 0.982 rg
+40.70 158.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 162.00 Td (error_message) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 346.64 162.00 Td (text) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 149.00 Td (created_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 149.00 Td (timestamptz) Tj ET
+0.972 0.976 0.982 rg
+40.70 132.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 69.00 136.00 Td (updated_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 319.76 136.00 Td (timestamptz) Tj ET
+BT /F1 6.60 Tf 0.420 0.460 0.520 rg 40.00 835.00 Td (one run - see notes 11, 12) Tj ET
+1.000 1.000 1.000 rg
+0.780 0.800 0.840 RG
+0.70 w
+430.00 379.00 330.00 451.00 re
+B
+0.110 0.470 0.510 rg
+430.00 808.00 330.00 22.00 re
+f
+BT /F2 10.00 Tf 1.000 1.000 1.000 rg 439.00 815.50 Td (investigation_evidence) Tj ET
+BT /F1 6.80 Tf 0.880 0.900 0.920 rg 729.46 816.00 Td (33 cols) Tj ET
+BT /F3 6.20 Tf 0.110 0.470 0.510 rg 437.00 799.00 Td (PK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 459.00 799.00 Td (id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 799.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+430.70 782.00 328.60 13.00 re
+f
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 437.00 786.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 459.00 786.00 Td (investigation_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 786.00 Td (uuid) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 773.00 Td (company_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 773.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+430.70 756.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 760.00 Td (sequence) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 725.12 760.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 747.00 Td (evidence_type) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 747.00 Td (varchar\(30\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 730.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 734.00 Td (claim) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 734.00 Td (text) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 721.00 Td (metric) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 721.00 Td (varchar\(150\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 704.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 708.00 Td (dimension) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 708.00 Td (varchar\(255\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 695.00 Td (dimension_value) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 695.00 Td (varchar\(500\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 678.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 682.00 Td (dimension_value_is_null) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 725.12 682.00 Td (boolean) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 669.00 Td (previous_period) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 669.00 Td (varchar\(100\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 652.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 656.00 Td (current_period) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 656.00 Td (varchar\(100\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 643.00 Td (previous_value) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 643.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+430.70 626.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 630.00 Td (current_value) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 630.00 Td (float) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 617.00 Td (absolute_change) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 617.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+430.70 600.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 604.00 Td (percentage_change) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 604.00 Td (float) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 591.00 Td (contribution_percentage) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 591.00 Td (float) Tj ET
+0.972 0.976 0.982 rg
+430.70 574.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 578.00 Td (explanatory_power) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 578.00 Td (float) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 565.00 Td (filters) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 565.00 Td (jsonb) Tj ET
+0.972 0.976 0.982 rg
+430.70 548.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 552.00 Td (source_dataset) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 552.00 Td (varchar\(255\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 539.00 Td (source_relation) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 539.00 Td (text) Tj ET
+0.972 0.976 0.982 rg
+430.70 522.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 526.00 Td (source_columns) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 526.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 513.00 Td (query) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 736.64 513.00 Td (text) Tj ET
+0.972 0.976 0.982 rg
+430.70 496.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 500.00 Td (query_sequence) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 725.12 500.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 487.00 Td (analysis_tool) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 487.00 Td (varchar\(50\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 470.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 474.00 Td (validation_status) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 474.00 Td (varchar\(20\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 461.00 Td (confidence) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 461.00 Td (varchar\(10\)) Tj ET
+0.972 0.976 0.982 rg
+430.70 444.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 448.00 Td (node_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 705.92 448.00 Td (varchar\(500\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 435.00 Td (depth) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 725.12 435.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+430.70 418.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 422.00 Td (classification) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 422.00 Td (varchar\(20\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 409.00 Td (rank) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 725.12 409.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+430.70 392.00 328.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 396.00 Td (details) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 732.80 396.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 459.00 383.00 Td (created_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 709.76 383.00 Td (timestamptz) Tj ET
+BT /F1 6.60 Tf 0.420 0.460 0.520 rg 430.00 835.00 Td (one structured claim - see notes 13, 14) Tj ET
+1.000 1.000 1.000 rg
+0.780 0.800 0.840 RG
+0.70 w
+830.00 639.00 310.00 191.00 re
+B
+0.550 0.200 0.240 rg
+830.00 808.00 310.00 22.00 re
+f
+BT /F2 10.00 Tf 1.000 1.000 1.000 rg 839.00 815.50 Td (investigation_queries) Tj ET
+BT /F1 6.80 Tf 0.880 0.900 0.920 rg 1109.46 816.00 Td (13 cols) Tj ET
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 837.00 799.00 Td (PK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 859.00 799.00 Td (id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 799.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+830.70 782.00 308.60 13.00 re
+f
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 837.00 786.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 859.00 786.00 Td (investigation_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 786.00 Td (uuid) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 773.00 Td (sequence) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1097.44 773.00 Td (integer U) Tj ET
+0.972 0.976 0.982 rg
+830.70 756.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 760.00 Td (purpose) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 760.00 Td (varchar\(40\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 747.00 Td (sql) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 747.00 Td (text) Tj ET
+0.972 0.976 0.982 rg
+830.70 730.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 734.00 Td (parameter_count) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 734.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 721.00 Td (rows_returned) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 721.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+830.70 704.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 708.00 Td (duration_ms) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 708.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 695.00 Td (status) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 695.00 Td (varchar\(10\)) Tj ET
+0.972 0.976 0.982 rg
+830.70 678.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 682.00 Td (error) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1085.92 682.00 Td (varchar\(500\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 669.00 Td (depth) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 669.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+830.70 652.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 656.00 Td (node_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1085.92 656.00 Td (varchar\(500\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 643.00 Td (created_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 643.00 Td (timestamptz) Tj ET
+BT /F1 6.60 Tf 0.420 0.460 0.520 rg 830.00 835.00 Td (the real SQL - see note 15) Tj ET
+1.000 1.000 1.000 rg
+0.780 0.800 0.840 RG
+0.70 w
+830.00 451.00 310.00 139.00 re
+B
+0.640 0.440 0.100 rg
+830.00 568.00 310.00 22.00 re
+f
+BT /F2 10.00 Tf 1.000 1.000 1.000 rg 839.00 575.50 Td (investigation_audit_events) Tj ET
+BT /F1 6.80 Tf 0.880 0.900 0.920 rg 1113.24 576.00 Td (9 cols) Tj ET
+BT /F3 6.20 Tf 0.640 0.440 0.100 rg 837.00 559.00 Td (PK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 859.00 559.00 Td (id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 559.00 Td (uuid) Tj ET
+0.972 0.976 0.982 rg
+830.70 542.00 308.60 13.00 re
+f
+BT /F3 6.20 Tf 0.550 0.200 0.240 rg 837.00 546.00 Td (FK) Tj ET
+BT /F1 7.40 Tf 0.120 0.140 0.170 rg 859.00 546.00 Td (investigation_id) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 546.00 Td (uuid) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 533.00 Td (sequence) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 533.00 Td (integer) Tj ET
+0.972 0.976 0.982 rg
+830.70 516.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 520.00 Td (event_type) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 520.00 Td (varchar\(40\)) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 507.00 Td (message) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1116.64 507.00 Td (text) Tj ET
+0.972 0.976 0.982 rg
+830.70 490.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 494.00 Td (elapsed_ms) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1105.12 494.00 Td (integer) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 481.00 Td (occurred_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 481.00 Td (timestamptz) Tj ET
+0.972 0.976 0.982 rg
+830.70 464.00 308.60 13.00 re
+f
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 468.00 Td (details) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1112.80 468.00 Td (jsonb) Tj ET
+BT /F1 7.40 Tf 0.250 0.280 0.330 rg 859.00 455.00 Td (created_at) Tj ET
+BT /F3 6.40 Tf 0.420 0.460 0.520 rg 1089.76 455.00 Td (timestamptz) Tj ET
+BT /F1 6.60 Tf 0.420 0.460 0.520 rg 830.00 595.00 Td (append only - see note 16) Tj ET
+0.130 0.290 0.550 rg
+1180.00 824.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 828.00 Td (11) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 828.00 Td (The execution metrics and verdicts are columns, not JSON.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 813.00 Td (rows_scanned through evidence_quality are what the Evidence panel shows first, and they) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 802.00 Td (are worth filtering on - 'every failed reconciliation this week' should be one indexed query.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 791.00 Td (The findings payload behind them is never queried into, so result, tree, decisions,) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 780.00 Td (quality_checks, limitations and notices stay in JSON.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 750.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 754.00 Td (12) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 754.00 Td (reconciliation_tolerance records the value actually applied.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 739.00 Td (The correctness invariant in app/analysis/rca/constants.py is deliberately not tunable,) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 728.00 Td (because a tunable one would let a lost-rows bug be configured into a green tick. The) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 717.00 Td (reporting tolerance beside it is configurable, so it is persisted per run: a raised tolerance) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 706.00 Td (shows up in the record rather than only in the environment.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 676.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 680.00 Td (13) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 680.00 Td (investigation_evidence.company_id is denormalised.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 665.00 Td (GET /api/evidence/{id} carries no dataset in its path, so tenant scoping would otherwise) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 654.00 Td (need a join through investigations on every lazy-loaded read. The same reasoning as) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 643.00 Td (column_profiles.dataset_id in note 5, and both paths are ON DELETE CASCADE.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 613.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 617.00 Td (14) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 617.00 Td (explanatory_power has its own column, never folded into contribution.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 602.00 Td (Contribution is how much a segment moved the total; explainability is how far the segments) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 591.00 Td (deviated from moving in proportion to their size. Movements in opposite directions add to) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 580.00 Td (the deviation without adding to the net change, so explainability is not a share and can) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 569.00 Td (exceed 100%. Storing them in one column would make that look like a bug.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 539.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 543.00 Td (15) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 543.00 Td (investigation_queries stores the SQL but never the parameters.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 528.00 Td (The text is the statement handed to DuckDB, verbatim, so 'seven queries in 141 ms' is) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 517.00 Td (inspectable rather than merely asserted. Filters and drill predicates bind their values, so a) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 506.00 Td (parameter can be a customer name - hence parameter_count and no parameters column,) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 495.00 Td (the same reasoning that pins sqlalchemy.engine logging to WARNING.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 465.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 469.00 Td (16) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 469.00 Td (elapsed_ms is the reproducible field, occurred_at is not.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 454.00 Td (An audit event records a monotonic offset from the run's start, which is identical across two) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 443.00 Td (runs of the same data; the wall-clock timestamp is derived from it for display. This mirrors) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 432.00 Td (the engine resolving periods against the data's own maximum rather than the clock.) Tj ET
+0.130 0.290 0.550 rg
+1180.00 402.50 15.00 13.00 re
+f
+BT /F2 7.40 Tf 1.000 1.000 1.000 rg 1183.14 406.00 Td (17) Tj ET
+BT /F2 8.80 Tf 0.120 0.140 0.170 rg 1203.00 406.00 Td (Three foreign keys point back to page 1.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 391.00 Td (investigations.dataset_id is ON DELETE CASCADE - an investigation whose underlying) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 380.00 Td (rows are gone can no longer be verified against them, and keeping it would be misleading.) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 369.00 Td (kpi_definition_id and created_by are ON DELETE SET NULL, so editing a KPI or removing) Tj ET
+BT /F1 7.80 Tf 0.320 0.350 0.400 rg 1203.00 358.00 Td (a user does not destroy the history of what was already found.) Tj ET
+BT /F3 7.40 Tf 0.420 0.460 0.520 rg 40.00 34.00 Td (Source of truth: backend/app/db/models/  -  regenerate with  python scripts/generate_erd.py) Tj ET
+endstream
 endobj
 9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+11 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
 endobj
 xref
-0 10
+0 12
 0000000000 65535 f 
 0000000015 00000 n 
 0000000064 00000 n 
-0000000127 00000 n 
-0000000274 00000 n 
-0000037026 00000 n 
-0000037173 00000 n 
-0000043256 00000 n 
-0000043353 00000 n 
-0000043455 00000 n 
+0000000133 00000 n 
+0000000282 00000 n 
+0000037034 00000 n 
+0000037183 00000 n 
+0000043266 00000 n 
+0000043415 00000 n 
+0000071601 00000 n 
+0000071698 00000 n 
+0000071801 00000 n 
 trailer
-<< /Size 10 /Root 1 0 R >>
+<< /Size 12 /Root 1 0 R >>
 startxref
-43550
+71897
 %%EOF

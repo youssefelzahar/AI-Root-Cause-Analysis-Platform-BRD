@@ -88,6 +88,27 @@ def test_the_primary_driver_is_the_segment_that_actually_moved(
     assert driver["previous_rows"] > 0
 
 
+def test_each_dimension_value_reports_both_period_values(
+    client, rca_golden_csv_bytes
+) -> None:
+    """The core of dimension analysis is both period values per segment, not just
+    the delta - a reader cannot check a change they cannot see the sides of.
+    Cairo fell 800 -> 500; Giza held at 700."""
+    dataset_id = _ready_dataset(client, rca_golden_csv_bytes)
+    body = _investigate(client, dataset_id).json()
+    regions = next(d for d in body["dimension_results"] if d["dimension"] == "region")
+    by_value = {s["value"]: s for s in regions["segments"]}
+
+    assert by_value["Cairo"]["previous_value"] == pytest.approx(800.0)
+    assert by_value["Cairo"]["current_value"] == pytest.approx(500.0)
+    assert by_value["Cairo"]["absolute_change"] == pytest.approx(-300.0)
+    assert by_value["Cairo"]["percent_change"] == pytest.approx(-37.5)
+
+    assert by_value["Giza"]["previous_value"] == pytest.approx(700.0)
+    assert by_value["Giza"]["current_value"] == pytest.approx(700.0)
+    assert by_value["Giza"]["absolute_change"] == pytest.approx(0.0)
+
+
 def test_the_tree_drills_from_the_top_driver_into_the_next_dimension(
     client, rca_golden_csv_bytes
 ) -> None:
@@ -300,6 +321,11 @@ def test_a_dataset_with_only_one_period_reports_no_previous_period(client) -> No
     body = _investigate(client, dataset_id).json()
     assert body["state"] == "no_previous_period"
     assert body["primary_drivers"] == []
+    # The page renders this sentence as its description, and absolute_change
+    # reads the missing baseline as current - 0, so the generic wording claimed
+    # the KPI "increased versus the previous period".
+    assert "increased" not in body["summary"]
+    assert "no earlier period" in body["summary"]
 
 
 def test_a_kpi_that_did_not_change_returns_no_drivers_and_says_so(client) -> None:
@@ -363,6 +389,108 @@ def test_the_tree_depth_can_be_limited_by_the_request(client, rca_golden_csv_byt
     cairo = next(c for c in tree["children"] if c["value"] == "Cairo")
     assert cairo["children"] == []
     assert cairo["stop_reason"] == "max_depth_reached"
+
+
+def _four_equal_drivers() -> bytes:
+    """Four regions each moving a quarter of the change, beside one that held.
+
+    Equal quarters make Pareto run to all four, so a cap is observable; the
+    region that held keeps the change from being proportional, without which no
+    dimension clears MIN_EXPLANATORY_POWER and nothing is named at all.
+    """
+    rows = ["order_date,region,product,segment,revenue"]
+    for name, current in (("r1", 700), ("r2", 700), ("r3", 700), ("r4", 700)):
+        rows.append(f"2026-06-15,{name},A,Enterprise,1000")
+        rows.append(f"2026-07-15,{name},A,Enterprise,{current}")
+    rows.append("2026-06-15,r5,A,Enterprise,4000")
+    rows.append("2026-07-15,r5,A,Enterprise,4000")
+    return ("\n".join(rows) + "\n").encode()
+
+
+def test_the_number_of_named_drivers_can_be_limited_by_the_request(client) -> None:
+    """max_tree_depth had a test; its sibling knob is the control §13 asks for
+    over how many candidates come back."""
+    dataset_id = _ready_dataset(client, _four_equal_drivers())
+    uncapped = _investigate(client, dataset_id).json()
+    assert len(uncapped["primary_drivers"]) == 4
+
+    capped = _investigate(client, dataset_id, max_drivers=1).json()
+    assert len(capped["primary_drivers"]) == 1
+
+
+def test_a_high_cardinality_dimension_is_truncated_without_losing_the_total(
+    client,
+) -> None:
+    """Everything past the top-K goes into one residual bucket, so the
+    contributions still add to 100% and the response says it truncated."""
+    rows = ["order_date,region,product,segment,revenue"]
+    for i in range(80):
+        rows.append(f"2026-06-15,r{i:02d},A,Enterprise,1000")
+        rows.append(f"2026-07-15,r{i:02d},A,Enterprise,{200 if i == 0 else 1000}")
+    dataset_id = _ready_dataset(client, ("\n".join(rows) + "\n").encode())
+    body = _investigate(client, dataset_id).json()
+
+    assert any(n["code"] == "DIMENSION_TRUNCATED" for n in body["notices"])
+    summary = next(d for d in body["dimensions_analysed"] if d["dimension"] == "region")
+    assert summary["truncated"] is True
+    regions = next(d for d in body["dimension_results"] if d["dimension"] == "region")
+    assert any(s["is_other_bucket"] for s in regions["segments"])
+    assert body["evidence"]["contribution_sum"] == pytest.approx(1.0)
+
+
+def test_every_truncated_dimension_gets_its_own_notice(client) -> None:
+    """One notice per dimension, so a reader learns *which* ones truncated.
+
+    That makes the notice code non-unique within the list, which is the contract
+    the UI keys on - keying by code alone silently drops list entries.
+    """
+    rows = ["order_date,region,product,segment,revenue"]
+    for i in range(80):
+        for day, amount in (("06-15", 1000), ("07-15", 200 if i == 0 else 1000)):
+            rows.append(f"2026-{day},r{i:02d},p{i:02d},Enterprise,{amount}")
+    dataset_id = _ready_dataset(client, ("\n".join(rows) + "\n").encode())
+    body = _investigate(client, dataset_id).json()
+
+    truncated = [n for n in body["notices"] if n["code"] == "DIMENSION_TRUNCATED"]
+    assert {n["details"]["dimension"] for n in truncated} == {"region", "product"}
+
+
+def test_a_null_dimension_value_arrives_as_its_own_segment(client) -> None:
+    """Both halves have to survive serialisation: ``value`` null *and*
+    ``value_is_null`` true. The table renders "(no value)" off the flag, so a
+    null that arrived as the string "None" would pass every engine test."""
+    content = (
+        b"order_date,region,product,segment,revenue\n"
+        b"2026-06-15,Cairo,A,Enterprise,500\n"
+        b"2026-06-15,Giza,A,Enterprise,400\n"
+        b"2026-06-15,Luxor,A,Enterprise,300\n"
+        b"2026-06-15,,A,Enterprise,300\n"
+        b"2026-07-15,Cairo,A,Enterprise,200\n"
+        b"2026-07-15,Giza,A,Enterprise,400\n"
+        b"2026-07-15,Luxor,A,Enterprise,300\n"
+        b"2026-07-15,,A,Enterprise,100\n"
+    )
+    dataset_id = _ready_dataset(client, content)
+    body = _investigate(client, dataset_id).json()
+    regions = next(d for d in body["dimension_results"] if d["dimension"] == "region")
+    blank = next(s for s in regions["segments"] if s["value_is_null"])
+    assert blank["value"] is None
+    assert blank["previous_value"] == pytest.approx(300.0)
+    assert blank["current_value"] == pytest.approx(100.0)
+
+
+def test_a_kpi_with_no_dimensions_reports_the_change_without_drivers(
+    client, rca_golden_csv_bytes
+) -> None:
+    dataset_id = _ready_dataset(client, rca_golden_csv_bytes, dimensions=[])
+    body = _investigate(client, dataset_id).json()
+    assert body["state"] == "ok"
+    assert body["kpi"]["absolute_change"] == pytest.approx(-300.0)
+    assert body["primary_drivers"] == []
+    assert body["rca_tree"] is None
+    assert any(n["code"] == "NO_DIMENSIONS_CONFIGURED" for n in body["notices"])
+    # Not "no segment accounts for a material share": there was nothing to split.
+    assert "no analysis dimensions" in body["summary"]
 
 
 # --- preconditions and tenancy -----------------------------------------------
@@ -472,8 +600,13 @@ def test_another_company_cannot_delete_this_investigation(
     assert _investigate(client, dataset_id).status_code == 200
 
 
-def test_the_demo_investigation_endpoints_are_gone(client) -> None:
+def test_the_demo_engine_is_gone_and_investigations_is_a_real_resource(client) -> None:
     """The pre-Phase-1 engine divided by gross movement, which reported segments
-    moving *against* the KPI as top drivers. It must not linger."""
-    assert client.post("/api/investigations", json={}).status_code == 404
+    moving *against* the KPI as top drivers. It must not linger.
+
+    ``POST /api/investigations`` used to 404 for the same reason. It is now the
+    persisted, evidence-backed endpoint, so the assertion is that it exists and
+    validates its body - not that it is absent.
+    """
     assert client.get("/api/demo").status_code == 404
+    assert client.post("/api/investigations", json={}).status_code == 422

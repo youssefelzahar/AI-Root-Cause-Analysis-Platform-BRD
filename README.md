@@ -137,6 +137,13 @@ contributions sum to exactly 1 and a segment moving *against* the KPI comes out 
 what makes it identifiable as an **offsetting factor** rather than a top driver. Values above 100 %
 and below 0 % are correct rather than clamped: if one exceeds 100 %, something else offset it.
 
+**When the net change nearly cancels, the denominator switches to gross movement.** Below
+`|Δ_total| / Σ|Δ_j| = 0.05` a net-basis share would exceed 1000 % and has stopped being a share, so
+the engine reports `Δ_i / Σ|Δ_j|` instead and says so via `attribution.basis`. Under that basis it is
+the *magnitudes* that sum to 1, and `evidence.contribution_sum` reports it that way — so the
+invariant reads 1.0 on every basis. The gross denominator is fixed at level 1 and threaded down, or
+each depth would renormalise against its own siblings and a child could show 77 % under a 50 % parent.
+
 | Aggregation | How contribution is computed |
 |---|---|
 | `SUM`, `COUNT` | Additive over disjoint groups: `Δ_i / Δ_total` |
@@ -165,7 +172,81 @@ Every node also carries **`expected_change` and `excess_change`** — what the s
 at its baseline share, and the surprise on top. Without those two, a large segment always looks like
 the driver simply because it is large.
 
-### 1.8 Frontend
+**High-cardinality dimensions truncate losslessly.** Two settings bound one breakdown query —
+`RCA_MAX_VALUES_PER_DIMENSION` (the top-K display bound) and `RCA_MAX_SEGMENTS_SCANNED` (an operator
+row cap) — and the engine applies the lower of the two. Everything past it is folded into a single
+`(other)` bucket computed by subtraction from the level total, so contributions still sum to 1 and a
+`DIMENSION_TRUNCATED` notice says it happened. That bucket is never ranked and never descended into:
+it holds many segments' movement at once, so treating it as a candidate would put it above every real
+driver.
+
+### 1.8 Evidence + Investigation layer (Phase 3)
+
+The analysis above is correct but, until now, unprovable: nothing was persisted, and the engine's
+statement counter threw the SQL away, so *"7 queries in 141 ms"* could not be checked. This phase
+makes an investigation a **persisted, evidence-backed resource**. Fully deterministic — no LLM.
+
+**An investigation is a snapshot, not an instruction to recompute.** `POST /api/investigations`
+returns 201 with a `Location`, and reading it back re-reads a row. `POST /api/rca/investigations`
+stays exactly as it was: that one is *the analysis* — stateless, 200, creates nothing. This one is
+*the investigation*. Both are kept deliberately.
+
+**Every important finding becomes a structured claim.** Fourteen evidence types, each with the
+provenance to check it: the dataset, the sanitised relation, the source columns, the analysis routine
+and — where the number was measured rather than derived — the **verbatim statement that produced
+it**. A derived record carries `query: null`. There is no third option: no representative query, no
+reconstruction. The provenance check asserts byte-identity against the trace, which is what makes
+*never fabricate SQL* mechanical rather than aspirational.
+
+**The query trace never stores a bound parameter.** `QueryRecord` has no field for one, by
+construction. Filters and drill predicates bind their values, so a parameter can be a customer name;
+only the count is kept. This is the same reasoning that pins `sqlalchemy.engine` logging to WARNING.
+
+**Two tolerances, because they answer different questions.**
+`rca.constants.CONTRIBUTION_SUM_TOLERANCE` is the correctness invariant — *did we lose rows?* — and is
+deliberately **not** tunable: a tunable one would let an operator configure a lost-rows bug into a
+green tick. `INVESTIGATION_RECONCILIATION_TOLERANCE` is the *reporting* band for the verdict, and the
+value actually applied is persisted on every row, so a raised tolerance shows up in the record rather
+than only in the environment.
+
+**Reconciliation is computed over the complete decomposition**, including the residual bucket and
+every immaterial segment — never over the primary/secondary/offsetting lists, which are a selection
+and are not expected to sum to anything. `NOT_APPLICABLE` is load-bearing: a MEDIAN cannot be
+decomposed at all, and reporting that as a *failure* would mark every such KPI as broken.
+
+**Evidence quality fails on a broken identity or missing provenance — never on thin data.** The
+airline dataset has 99.98 % of its rows outside both compared windows; that earns a caveat and reads
+as `VALIDATED`, because the analysis of the rows inside the windows is sound. Thin data surfaces
+instead as `confidence: low` on the affected records and in the `coverage` evidence. Keeping those
+two judgements apart is the whole point of the quality summary.
+
+**Explainability is not a contribution, and the schema says so.** They are separate columns, separate
+evidence types, and separate blocks in the UI with different bar shapes. A contribution is a share of
+the change and cannot exceed 100 %; explainability measures deviation from proportional movement, so
+segments moving in opposite directions add to it without adding to the net change. The airline
+fixture reports 132 % and that is correct.
+
+**Tree drift has three states, because two causes are legitimate.** A pure split carries a child that
+cannot be scored by deviation-from-proportional, and a truncated level loses its remainder with no
+residual bucket to hold it. `DRIFT_UNEXPLAINED` is the third case — the lost-rows bug the engine's
+warning log always existed for, now surfaced as a verdict.
+
+**Evidence ids are derived, not generated.** `uuid5` over `(investigation, type, key)`, which is what
+lets the tree reference the evidence behind each node without inserting rows and reading them back —
+keeping the whole builder in the pure layer. It also makes reproducibility a one-line assertion.
+
+**`PARTIAL` is not a failure.** The decomposition succeeded and something optional did not: the
+anomaly step was skipped, a dimension was excluded or truncated, or the tree drifted unexplained.
+Every reason lands in `limitations`. `FAILED` means there is no result — and the row is still
+persisted, because an investigation that vanishes on failure has no audit trail and makes `FAILED`
+dead vocabulary.
+
+**Anomaly detection runs as a bounded extra step** on the same connection (the two engines project
+into differently named temp tables), filling the `anomaly` and `trend` evidence types. Its failure is
+a limitation, never a 5xx.
+
+### 1.9 Frontend
+
 
 Next.js 16 App Router, React 19, Server Components by default with `"use client"` islands only
 where interaction demands it.
@@ -204,27 +285,31 @@ document visibility and stops at a 10-minute deadline. The profile tabs are clie
 
 ```
 backend/app/
-  api/routes/     context, uploads, datasets, sql_connections, sql_editor, rca, anomalies
+  api/routes/     context, uploads, datasets, sql_connections, sql_editor, rca, anomalies,
+                  investigations
   api/deps.py     get_db, get_current_context   ← the single auth seam
   core/           config, security, logging, exceptions, middleware
-  db/models/      company, user, dataset, profile, validation, kpi, sql_connection, enums
-  db/migrations/  0001 initial schema · 0002 seed default context
+  db/models/      company, user, dataset, profile, validation, kpi, sql_connection,
+                  investigation, enums
+  db/migrations/  0001 initial schema · 0002 seed default context · 0003 investigation layer
   schemas/        Pydantic request/response contracts
   services/       dataset, dataset_source, profiling, validation, kpi, sql, storage, jobs,
-                  materialize, rca, anomaly
-  analysis/       duckdb_session, type_inference, profiler, kpi_heuristics   (pure, no DB)
+                  materialize, rca, anomaly, investigation
+  analysis/       duckdb_session, trace, type_inference, profiler, kpi_heuristics (pure, no DB)
   analysis/rca/   constants, models, casting, period_analysis, dimension_analysis,
                   contribution, ranking, tree, engine                       (pure, no DB)
   analysis/anomaly/ constants, models, baseline, scoring, detectors, series,
                   engine                                                    (pure, no DB)
+  analysis/investigation/ constants, models, evidence, validation, decisions,
+                  audit, graph, engine                                      (pure, no DB)
   storage/        base (abstraction) + local
   connectors/     sqlserver, sql_guard
 frontend/src/
   app/            routes
   components/     ui primitives + layout
-  features/       datasets (upload, profile, kpi), sql-editor, rca, anomaly
+  features/       datasets (upload, profile, kpi), sql-editor, rca, rca/evidence, anomaly
   lib/api/        typed client: base-url, http, errors, datasets, sql, uploads, rca,
-                  anomaly
+                  anomaly, investigations
   styles/         tokens, base, components
 docker/nginx/
 docs/             database-erd.pdf
@@ -352,9 +437,21 @@ bundle would permanently carry `localhost:8000`. Instead the browser always call
   object storage; nothing calls `local_path()` directly.
 - **`run_migrations` is dead config** — the setting exists and is documented in `.env.example`,
   but nothing reads it. Run Alembic explicitly.
-- **Investigations are not stored.** Each request recomputes from Parquet, so there is no history
-  and no shareable snapshot — a link re-runs the analysis. Adding an `investigations` table is the
-  natural next step if history is wanted.
+- **Investigations are stored as of Phase 3** — this limitation is resolved. It used to read
+  *"each request recomputes from Parquet, so there is no history and no shareable snapshot"*.
+  `POST /api/investigations` now persists one, and `/investigations/{datasetId}/{investigationId}` is
+  a permalink that re-reads it. The old stateless `POST /api/rca/investigations` is unchanged and
+  still recomputes; it is kept because it is a different thing, not a legacy path.
+- **RBAC is inherited, not implemented.** Tenant isolation and dataset ownership are enforced
+  rigorously — every read is scoped by `company_id` in the service layer, and cross-tenant access
+  returns 404 rather than 403 so the API never confirms another tenant's row exists. But there are no
+  roles, because there is no authentication: `get_current_context` remains the single documented seam.
+  Inventing a role model here would be a second seam to unpick later.
+- **The query trace records the real local path.** The stored statement is byte-identical to what ran,
+  which is what makes provenance checkable — and for a local-disk backend that statement contains the
+  server's absolute storage path. The investigation's own `source_relation` is the sanitised
+  storage-key form, so the path appears only in *View queries*. Redacting the prefix would remove the
+  disclosure at the cost of the verbatim guarantee; that trade is deliberately left open.
 - **The engine reads more date formats than the profiler infers.** `casting.time_expression` falls
   back through `DATE_FORMATS`, but Phase 1's profiler types a column with a plain `TRY_CAST`, so a
   column of `15-Jun-2026` is inferred as text and KPI validation blocks it before RCA is reachable.
@@ -379,7 +476,7 @@ The PRD leaves four things undefined. These choices are worth reviewing:
 
 ## 8. Test suite
 
-**259 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
+**500 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
 credential encryption, log redaction and local storage; plus the RCA engine —
 contribution maths (including a property test that AVG's rate + mix effects reconstruct ΔA for
 random inputs), period resolution across all five comparison settings, driver classification, the
@@ -391,6 +488,20 @@ The golden RCA fixture is the PRD's own worked example, and the test proves the 
 tests guard the string-typed-Parquet trap: one compares a currency-formatted measure against a
 numeric one, and one uploads a real **xlsx** so `excel_to_parquet` genuinely produces all-string
 columns, then asserts identical totals.
+
+The evidence layer adds the query trace (including a test that a filtered KPI's filter value appears
+in no stored SQL and no record attribute), the evidence builder and validator, the decision trace,
+and the investigation API end to end — lifecycle, tenant isolation on every endpoint, and the
+acceptance case below.
+
+The section 23 acceptance fixture is 43 rows engineered so the whole expected answer falls out of the
+arithmetic: `Value For Money` 65 → 50, −15 at −23.1 %, **Singapore Airlines** as a GONE primary
+driver at −12 / 80 %, five named secondaries, three offsetting factors, and the
+`airline → sentiment: positive → cabin: Economy` hierarchy at −12 / 80 % on every level. Its
+marginals are re-checked from the CSV in `test_investigation_fixture.py`, so a hand edit that breaks
+the answer fails there rather than in the acceptance test where the cause would be hard to see. The
+same fixture also produces an explainability of 132 %, which covers the *above 100 % is not an error*
+case.
 
 Fixtures run against SQLite; models use `JSON().with_variant(JSONB, "postgresql")` so the same
 schema is testable without a server.
@@ -437,10 +548,29 @@ POST   /api/sql/connections/{id}/save-as-dataset
 POST   /api/rca/investigations                        {dataset_id, kpi_definition_id?} -> 200
 DELETE /api/rca/investigations/{dataset_id}           discards the KPI behind it -> 204
 
+POST   /api/investigations                            {dataset_id, question?} -> 201 + Location
+GET    /api/investigations                            ?dataset_id= &status= -> paged history
+GET    /api/investigations/{id}                        findings, verdicts, decisions - no detail
+GET    /api/investigations/{id}/evidence               ?type= repeatable -> paged records
+GET    /api/investigations/{id}/tree                   the hierarchy, evidence ids per node
+GET    /api/investigations/{id}/queries                every statement, verbatim
+GET    /api/investigations/{id}/audit                  what happened, in order
+GET    /api/evidence/{id}                              one record, addressable on its own
+
 POST   /api/anomalies/detections                      {dataset_id, grain?, method?} -> 200
 ```
 
 `POST /api/rca/investigations` returns 200 rather than 201: it is stateless and creates nothing.
+`POST /api/investigations` returns **201** because it does — and 200 when it reused an equivalent
+completed run over unchanged data, which is the honest reading of *reuse cached analytical results*:
+the persisted row **is** the cache, and it is exact by construction. A result cache keyed on inputs
+was deliberately not built, because a stale hit would attach a real query trace to numbers that trace
+did not produce — precisely the fabrication the evidence layer exists to prevent.
+
+`GET /api/investigations/{id}` deliberately carries no evidence list, query trace or audit trail. They
+are the largest parts of the record and the least often wanted, so each has its own endpoint and the
+UI fetches them on first open.
+
 Failure codes that are really workflow states — `DATASET_NOT_ANALYSIS_READY`,
 `KPI_DEFINITION_NOT_FOUND`, `KPI_TIME_COLUMN_REQUIRED`, `RCA_COLUMN_MISSING` (schema drift),
 `RCA_NO_PREVIOUS_PERIOD` — are rendered inline by the UI with the next step, not as crashes. Outcomes

@@ -1,0 +1,1011 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+3 0 obj
+<< /Length 4280 >>
+stream
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+54.00 764.00 Td
+(AI Root Cause Analysis Platform) Tj
+ET
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+524.00 28.00 Td
+(Page 1) Tj
+ET
+BT
+0.04 0.13 0.24 rg
+/F1 22 Tf
+54.00 696.00 Td
+(RCA Module Explanation) Tj
+ET
+BT
+0.25 0.29 0.34 rg
+/F1 13 Tf
+54.00 668.00 Td
+(contribution.py, dimension_analysis.py, and tree.py) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 638 m 558 638 l S
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 624.00 Td
+(This document explains the three core root-cause-analysis modules in) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 609.00 Td
+(backend/app/analysis/rca. Together they answer three questions: what SQL should be run,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 594.00 Td
+(how each segment's movement should be attributed, and which branches deserve a deeper) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 579.00 Td
+(drill-down.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 559.00 Td
+(The engine module orchestrates execution, but these files deliberately keep their own) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 544.00 Td
+(responsibilities narrow. dimension_analysis.py builds DuckDB SQL strings,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 529.00 Td
+(contribution.py turns query results into evidence-rich driver nodes, and tree.py decides) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 11 Tf
+54.00 514.00 Td
+(how to descend through dimensions.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 15 Tf
+54.00 489.00 Td
+(1. Big Picture) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 478 m 558 478 l S
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 464.00 Td
+(The RCA flow starts by projecting the source relation into a narrow temporary table named) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 449.00 Td
+(rca_base. That temp table keeps only timestamp, measure, and selected dimensions. The engine) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 434.00 Td
+(can then aggregate periods and dimensions without repeatedly scanning the full source.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 414.00 Td
+(After SQL returns totals per segment, contribution.py decides whether the KPI can be) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 399.00 Td
+(decomposed at all. SUM and COUNT use net-change attribution, AVG uses a mix/rate) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 384.00 Td
+(decomposition, COUNT_DISTINCT is only allowed when overlap checks prove the dimension) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 369.00 Td
+(partitions the distinct key set, and MIN, MAX, and MEDIAN are treated as unattributable for) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 354.00 Td
+(additive driver ranking.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 334.00 Td
+(tree.py then converts a flat driver list into a drill-down plan. It picks the most) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 319.00 Td
+(explanatory remaining dimension, expands only material primary nodes, and records stop) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 304.00 Td
+(reasons when a node should not be queried further.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 12 Tf
+54.00 284.00 Td
+(Key Points) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 266.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 266.00 Td
+(dimension_analysis.py: safe SQL builders and period/dimension aggregation shape.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 249.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 249.00 Td
+(contribution.py: attribution basis, contribution math, support flags, and driver node) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 234.00 Td
+(construction.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 217.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 217.00 Td
+(tree.py: dimension selection, branching limits, drill eligibility, unexplained share, and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 202.00 Td
+(synthetic root.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 15 Tf
+54.00 176.00 Td
+(2. dimension_analysis.py) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 165 m 558 165 l S
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 151.00 Td
+(This file is a SQL factory. Every public function returns SQL text, and build_filter_clause) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 136.00 Td
+(returns a predicate plus bind parameters. It does not open a connection or execute anything;) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 121.00 Td
+(the engine owns execution.) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Length 5081 >>
+stream
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+54.00 764.00 Td
+(AI Root Cause Analysis Platform) Tj
+ET
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+524.00 28.00 Td
+(Page 2) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 738.00 Td
+(build_base_table_sql creates a temp table with columns ts, m, and d0..dN. That projection is) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 723.00 Td
+(the performance foundation: downstream RCA queries work on a narrow, in-memory DuckDB table) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 708.00 Td
+(instead of the original wide dataset.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 688.00 Td
+(period_case_expression assigns each row to current, previous, or neither using half-open) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 673.00 Td
+(time windows. Half-open comparisons avoid double-counting records that land exactly on a) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 658.00 Td
+(boundary.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 638.00 Td
+(build_totals_sql aggregates the current and previous periods in one pass using FILTER) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 623.00 Td
+(clauses. It returns values, non-null measure counts, row counts, and rows outside the) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 608.00 Td
+(compared periods.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 588.00 Td
+(build_breakdown_sql performs a UNION ALL unpivot over all requested dimensions, groups by) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 573.00 Td
+(dimension and segment, and returns both periods side by side. This gives full-outer) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 558.00 Td
+(semantics naturally: new segments and lost segments remain visible because grouping happens) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 543.00 Td
+(across both periods.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 523.00 Td
+(build_distinct_overlap_sql supports COUNT_DISTINCT attribution. It computes sum\(per-group) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 508.00 Td
+(distinct\) - overall distinct for each period. A zero gap means the chosen dimension) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 493.00 Td
+(partitions the distinct key set and can be decomposed safely.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 473.00 Td
+(build_filter_clause is the safety gate for KPI filters. It accepts a closed operator) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 458.00 Td
+(grammar, verifies that columns exist, quotes identifiers, and emits placeholders with bind) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 443.00 Td
+(params instead of allowing raw SQL passthrough.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 12 Tf
+54.00 423.00 Td
+(Reference Flow) Tj
+ET
+0.96 0.97 0.98 rg
+50 341 512 70 re f
+0.78 0.82 0.86 RG
+0.6 w
+50 341 512 70 re S
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 391.00 Td
+(Source -> build_base_table_sql -> rca_base\(ts, m, d0..dN\)) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 377.00 Td
+(rca_base -> build_totals_sql -> global period totals) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 363.00 Td
+(rca_base -> build_breakdown_sql -> per-dimension SegmentTotals) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 349.00 Td
+(rca_base -> build_distinct_overlap_sql -> COUNT_DISTINCT additivity check) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 15 Tf
+54.00 320.00 Td
+(3. contribution.py) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 309 m 558 309 l S
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 295.00 Td
+(This file is the mathematics layer. It contains pure functions over SegmentTotals and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 280.00 Td
+(Totals. There is no SQL and no I/O, which makes the analytical behavior easier to test and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 265.00 Td
+(reason about.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 245.00 Td
+(percent_change computes signed percent change using abs\(previous\) as the denominator. That) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 230.00 Td
+(matters for negative-valued KPIs: moving from -100 to -150 should read as -50%, not +50%.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 210.00 Td
+(basis_for decides the attribution basis. Non-decomposable aggregations get an unattributable) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 195.00 Td
+(reason. If total net change is tiny compared with gross segment movement, it switches to) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 180.00 Td
+(gross movement to avoid thousands-of-percent artifacts caused by cancellation. AVG uses) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 165.00 Td
+(MIX_RATE, while additive aggregations use NET_CHANGE.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 145.00 Td
+(_avg_effects implements a centered Bennet decomposition for averages. It splits the total) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 130.00 Td
+(average movement into rate effect, meaning a segment's own average changed, and mix effect,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 115.00 Td
+(meaning the segment's share of volume changed. Centering by the overall average prevents) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 100.00 Td
+(fake effects when all groups have the same mean.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Length 5160 >>
+stream
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+54.00 764.00 Td
+(AI Root Cause Analysis Platform) Tj
+ET
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+524.00 28.00 Td
+(Page 3) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 738.00 Td
+(build_nodes turns SegmentTotals into DriverNode objects. Each node carries raw values,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 723.00 Td
+(absolute and percent change, contribution, rate/mix effects when applicable, current and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 708.00 Td
+(previous shares, expected proportional change, excess change, new/lost flags, and support) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 693.00 Td
+(warnings.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 673.00 Td
+(A key design rule is that contribution is always relative to the global KPI change, even for) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 658.00 Td
+(deeper tree nodes. The local relationship is stored separately as share_of_parent_change.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 643.00 Td
+(This keeps a child from appearing as 100% of the RCA just because it explains all of a small) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 628.00 Td
+(parent.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 608.00 Td
+(contribution_sum is an invariant check. Under NET_CHANGE and MIX_RATE, contributions should) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 593.00 Td
+(sum to 1. Under GROSS_MOVEMENT, absolute contribution magnitudes should sum to 1. Drift) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 578.00 Td
+(signals missing rows or an unreported residual bucket.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 558.00 Td
+(explanatory_power ranks dimensions by deviation from proportional movement rather than by) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 543.00 Td
+(the largest single segment. This avoids always rewarding high-cardinality dimensions that) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 528.00 Td
+(happen to contain one big value.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 12 Tf
+54.00 508.00 Td
+(Reference Flow) Tj
+ET
+0.96 0.97 0.98 rg
+50 412 512 84 re f
+0.78 0.82 0.86 RG
+0.6 w
+50 412 512 84 re S
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 476.00 Td
+(NET_CHANGE: contribution = segment_delta / global_delta) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 462.00 Td
+(GROSS_MOVEMENT: contribution = segment_delta / sum\(abs\(segment_delta\)\)) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 448.00 Td
+(MIX_RATE: contribution = \(rate_effect + mix_effect\) / global_delta) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 434.00 Td
+(Expected change: level_change * previous_segment_share) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 420.00 Td
+(Excess change: actual_segment_change - expected_change) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 15 Tf
+54.00 391.00 Td
+(4. tree.py) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 380 m 558 380 l S
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 366.00 Td
+(This file owns drill-down decisions. It does not execute SQL; it tells the engine what to) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 351.00 Td
+(ask next and why the tree should stop expanding in particular places.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 331.00 Td
+(select_dimension compares candidate breakdowns for a node. It ranks normal partition splits) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 316.00 Td
+(by explanatory power, then uses strongest contribution, number of nodes, and original) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 301.00 Td
+(dimension order as tie-breakers. A dimension with only one populated segment is handled as a) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 286.00 Td
+(pure split, because it can be informative even though its explanatory-power score is zero by) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 271.00 Td
+(construction.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 251.00 Td
+(branching_at returns how many nodes can expand at each depth. The configured shape is 3 at) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 236.00 Td
+(depth 1, then 2 at deeper levels. This prevents the RCA tree from exploding into a wide,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 221.00 Td
+(low-signal report.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 201.00 Td
+(drillable records a stop_reason directly on nodes that should not be expanded. Reasons) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 186.00 Td
+(include max_depth_reached, no_dimensions_left, residual_bucket, contribution_immaterial, and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 171.00 Td
+(insufficient_rows for mean-like aggregations.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 151.00 Td
+(frontier_for picks the primary nodes worth expanding at the current depth, sorted by) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 136.00 Td
+(contribution magnitude. Nodes beyond the branch limit are marked with branching_limit.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 116.00 Td
+(unexplained_share compares a parent node's absolute change with the sum of its children.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 101.00 Td
+(This is especially useful when a dimension query was truncated or children only partially) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 86.00 Td
+(cover the parent.) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Length 3790 >>
+stream
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+54.00 764.00 Td
+(AI Root Cause Analysis Platform) Tj
+ET
+BT
+0.35 0.35 0.35 rg
+/F1 8 Tf
+524.00 28.00 Td
+(Page 4) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 738.00 Td
+(synthetic_root creates a depth-0 DriverNode for the whole KPI. It makes tree invariants) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 723.00 Td
+(simple: the root represents the full change, and its children represent decomposed pieces of) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 708.00 Td
+(that same change.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 12 Tf
+54.00 688.00 Td
+(Reference Flow) Tj
+ET
+0.96 0.97 0.98 rg
+50 592 512 84 re f
+0.78 0.82 0.86 RG
+0.6 w
+50 592 512 84 re S
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 656.00 Td
+(Engine gathers candidate dimension breakdowns) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 642.00 Td
+(tree.select_dimension chooses the best remaining split) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 628.00 Td
+(tree.frontier_for chooses material primary nodes) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 614.00 Td
+(tree.drillable decides whether each node earns another query) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F2 9.2 Tf
+60.00 600.00 Td
+(tree.unexplained_share records coverage gaps after children attach) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 15 Tf
+54.00 571.00 Td
+(5. How They Work Together) Tj
+ET
+0.78 0.78 0.78 RG
+0.8 w
+54 560 m 558 560 l S
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 546.00 Td
+(The cleanest way to read these files is as a pipeline. dimension_analysis.py asks DuckDB for) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 531.00 Td
+(period totals and segment totals. contribution.py converts those totals into normalized,) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 516.00 Td
+(evidence-rich DriverNode objects. tree.py chooses the next split and controls the) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 501.00 Td
+(breadth-first expansion.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 481.00 Td
+(The modules also protect important product promises. They avoid ranking by raw percent) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 466.00 Td
+(change, preserve offsetting factors, distinguish new and lost segments, avoid fake average) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 451.00 Td
+(effects, surface unattributable aggregations honestly, and carry residual or unexplained) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 436.00 Td
+(shares instead of hiding uncertainty.) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 416.00 Td
+(The result is an RCA engine whose output can say not only what moved, but also how that) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 401.00 Td
+(claim was calculated, where the decomposition is mathematically valid, and where the) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+54.00 386.00 Td
+(investigation deliberately stopped.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 12 Tf
+54.00 366.00 Td
+(Key Points) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 348.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 348.00 Td
+(Performance promise: one narrow temp table and compact aggregate queries.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 331.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 331.00 Td
+(Math promise: contributions are shares of the net KPI change unless cancellation requires) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 316.00 Td
+(gross movement.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 299.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 299.00 Td
+(Evidence promise: each node keeps counts, shares, support flags, expected change, and) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 284.00 Td
+(excess change.) Tj
+ET
+BT
+0.05 0.16 0.28 rg
+/F1 10.5 Tf
+54.00 267.00 Td
+(-) Tj
+ET
+BT
+0.08 0.08 0.08 rg
+/F1 10.5 Tf
+72.00 267.00 Td
+(Tree promise: deeper analysis is bounded, material, and explicit about stop reasons.) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+8 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 4 0 R >>
+endobj
+9 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+10 0 obj
+<< /Type /Page /Parent 11 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 6 0 R >>
+endobj
+11 0 obj
+<< /Type /Pages /Kids [7 0 R 8 0 R 9 0 R 10 0 R] /Count 4 >>
+endobj
+12 0 obj
+<< /Type /Catalog /Pages 11 0 R >>
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000000153 00000 n 
+0000004485 00000 n 
+0000009618 00000 n 
+0000014830 00000 n 
+0000018672 00000 n 
+0000018809 00000 n 
+0000018946 00000 n 
+0000019083 00000 n 
+0000019221 00000 n 
+0000019298 00000 n 
+trailer
+<< /Size 13 /Root 12 0 R >>
+startxref
+19349
+%%EOF

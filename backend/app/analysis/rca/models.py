@@ -95,6 +95,17 @@ class RcaSpec:
     max_values_per_dimension: int = 50
     max_segments_scanned: int = 5_000
 
+    @property
+    def segment_limit(self) -> int:
+        """The one limit governing the query, the truncation test and drill levels.
+
+        Both caps have to resolve to a single number or truncation goes undetected:
+        clamping the query to the lower of the two while testing ``truncated``
+        against the higher one drops segments with no residual bucket and no
+        notice, which silently breaks the contribution sum.
+        """
+        return min(self.max_values_per_dimension, self.max_segments_scanned)
+
 
 @dataclass(frozen=True)
 class Period:
@@ -260,7 +271,6 @@ class Evidence:
     rows_outside_periods: int = 0
     unparsed_time_rows: int = 0
     unparsed_measure_rows: int = 0
-    null_dimension_rows: int = 0
     statements_executed: int = 0
     duration_ms: int = 0
     contribution_sum: float | None = None

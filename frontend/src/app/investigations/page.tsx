@@ -49,14 +49,25 @@ export default async function InvestigationsPage() {
                 {page.items.map((dataset) => (
                   <tr key={dataset.id}>
                     <td>
-                      <Link href={`/investigations/${dataset.id}`}>{dataset.name}</Link>
+                      {/* prefetch={false}: following this link runs an
+                          analysis, and a viewport prefetch would start one
+                          without anybody clicking. The route's loading.tsx is
+                          what makes that boundary work; this is belt and
+                          braces. */}
+                      <Link href={`/investigations/${dataset.id}`} prefetch={false}>
+                        {dataset.name}
+                      </Link>
                     </td>
                     <td className="numeric">{formatNumber(dataset.row_count)}</td>
                     <td className="numeric">{formatNumber(dataset.column_count)}</td>
                     <td className="muted">{formatDate(dataset.created_at)}</td>
                     <td>
                       <div className="row-actions">
-                        <Link className="btn btn-sm" href={`/investigations/${dataset.id}`}>
+                        <Link
+                          className="btn btn-sm"
+                          href={`/investigations/${dataset.id}`}
+                          prefetch={false}
+                        >
                           <LineChart size={15} /> Run analysis
                         </Link>
                         <DeleteInvestigationButton datasetId={dataset.id} name={dataset.name} />

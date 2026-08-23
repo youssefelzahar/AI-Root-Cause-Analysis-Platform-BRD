@@ -59,6 +59,19 @@ const BLOCKED: Record<
     title: "This dataset has no stored data",
     body: "The upload did not complete, so there is nothing to analyse.",
   },
+  // Investigations are scoped to the company that ran them. Without this the
+  // frontend has no auth handling at all, so a 403 would land in error.tsx as a
+  // sanitised message with no explanation.
+  INVESTIGATION_FORBIDDEN: {
+    title: "This investigation belongs to another workspace",
+    body: "Investigations are scoped to the company that ran them, so this one cannot be opened from here.",
+  },
+  KPI_DEFINITION_CHANGED: {
+    title: "The KPI behind this investigation has changed",
+    body: "This snapshot was built from a KPI definition that has since been edited or removed, so it cannot be re-run as it was. Configure the KPI again and run a fresh investigation.",
+    href: "kpi",
+    label: "Edit the KPI",
+  },
 };
 
 export function isBlockedCode(code: string | undefined): boolean {

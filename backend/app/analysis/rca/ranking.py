@@ -60,15 +60,20 @@ def classify(
 
     Ranking and mutation happen in place: every node ends with exactly one
     classification, assigned within its own sibling set.
+
+    Ties break on ``node_id`` so the result does not depend on the order the
+    caller happened to pass: it is always a string and unique within a sibling
+    set, which ``value`` is not on either count. Descending magnitude with an
+    ascending tie-break needs two passes rather than ``reverse=True``.
     """
     scored = [n for n in nodes if n.contribution is not None and not n.is_other_bucket]
     aligned = sorted(
-        (n for n in scored if n.contribution > 0),
+        sorted((n for n in scored if n.contribution > 0), key=lambda n: n.node_id),
         key=lambda n: n.contribution,
         reverse=True,
     )
     opposed = sorted(
-        (n for n in scored if n.contribution < 0),
+        sorted((n for n in scored if n.contribution < 0), key=lambda n: n.node_id),
         key=lambda n: abs(n.contribution),
         reverse=True,
     )
@@ -104,8 +109,18 @@ def classify(
     for node in offsetting:
         node.classification = Classification.OFFSETTING
 
+    # Rank by movement magnitude, so an offsetting factor can outrank a weaker
+    # driver - the field answers "what moved most here", not "which driver is
+    # first". Only scored segments are ranked: the residual bucket holds every
+    # unlisted segment's movement at once, so ranking it would put "(other)"
+    # above every real driver. Anything unranked keeps rank 0.
     for index, node in enumerate(
-        sorted(nodes, key=lambda n: abs(n.contribution or 0.0), reverse=True), start=1
+        sorted(
+            sorted(scored, key=lambda n: n.node_id),
+            key=lambda n: abs(n.contribution or 0.0),
+            reverse=True,
+        ),
+        start=1,
     ):
         node.rank = index
 

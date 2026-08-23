@@ -69,9 +69,14 @@ class Settings(BaseSettings):
     duckdb_temp_dir: str = "/data/tmp/duckdb"
 
     # --- root cause analysis ---------------------------------------------
-    # Safety cap on rows returned by one breakdown query. Display truncation is
-    # a separate, smaller limit in app.analysis.rca.constants.
+    # Two limits on one breakdown query, and the engine applies the lower of the
+    # two. The first is an operator safety cap on rows returned; the second is
+    # the top-K display bound - past ~50 values no dimension table is legible,
+    # and the residual "(other)" bucket keeps the arithmetic exact either way.
+    # Analytical thresholds are not tunable here: they live in
+    # app.analysis.rca.constants where each one carries its justification.
     rca_max_segments_scanned: int = 5_000
+    rca_max_values_per_dimension: int = 50
 
     # --- anomaly detection -----------------------------------------------
     # Safety cap on the number of calendar periods one series may span. A daily
@@ -79,6 +84,19 @@ class Settings(BaseSettings):
     # certainly mis-detected. Statistical thresholds are not tunable here - they
     # live in app.analysis.anomaly.constants where they can be justified.
     anomaly_max_periods: int = 5_000
+
+    # --- investigation & evidence ----------------------------------------
+    # The band within which the contribution decomposition is *reported* as
+    # reconciled. This is a reporting bound, not the correctness invariant:
+    # app.analysis.rca.constants.CONTRIBUTION_SUM_TOLERANCE stays deliberately
+    # un-overridable, because making it tunable would let an operator turn a
+    # lost-rows bug into a green tick. The value actually applied is persisted on
+    # every investigation, so a raised tolerance is visible in the record rather
+    # than hidden in the environment.
+    investigation_reconciliation_tolerance: float = 1e-6
+    # An investigation runs synchronously, so a row left RUNNING means the
+    # process died mid-request. Sibling of profiling_stale_minutes.
+    investigation_stale_minutes: int = 10
 
     # --- secrets ---------------------------------------------------------
     encryption_key: SecretStr | None = None

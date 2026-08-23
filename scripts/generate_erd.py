@@ -1,4 +1,4 @@
-"""Render the Phase 1 database ERD to a vector PDF.
+﻿"""Render the Phase 1 database ERD to a vector PDF.
 
 Writes the PDF by hand rather than pulling in matplotlib/reportlab/graphviz:
 the diagram is a few hundred rectangles, lines and text runs, and none of those
@@ -68,8 +68,12 @@ def text_width(s: str, size: float, bold: bool = False, mono: bool = False) -> f
 
 # --- schema ----------------------------------------------------------------
 # (name, type, key)  key in {"PK", "FK", ""}
+# "page" places the table: 1 is the Phase 1 data foundation, 3 the evidence and
+# investigation layer. Cross-page foreign keys are called out in the notes,
+# because an edge cannot be drawn between two pages.
 TABLES: dict[str, dict] = {
     "companies": {
+        "page": 1,
         "x": 40, "y": 110, "w": 300, "color": TEAL, "note": "tenant root",
         "cols": [
             ("id", "uuid", "PK"),
@@ -80,6 +84,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "users": {
+        "page": 1,
         "x": 40, "y": 250, "w": 300, "color": TEAL, "note": "no credentials - see note 1",
         "cols": [
             ("id", "uuid", "PK"),
@@ -92,6 +97,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "sql_connections": {
+        "page": 1,
         "x": 40, "y": 430, "w": 300, "color": MAROON, "note": "PRD 8",
         "cols": [
             ("id", "uuid", "PK"),
@@ -114,6 +120,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "datasets": {
+        "page": 1,
         "x": 430, "y": 180, "w": 310, "color": BLUE, "note": "PRD 7 - id doubles as storage UUID",
         "cols": [
             ("id", "uuid", "PK"),
@@ -147,6 +154,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "dataset_profiles": {
+        "page": 1,
         "x": 830, "y": 110, "w": 300, "color": GREEN, "note": "PRD 9 - dataset level",
         "cols": [
             ("id", "uuid", "PK"),
@@ -171,6 +179,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "schema_validations": {
+        "page": 1,
         "x": 830, "y": 560, "w": 300, "color": AMBER, "note": "PRD 10 - append only",
         "cols": [
             ("id", "uuid", "PK"),
@@ -188,6 +197,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "column_profiles": {
+        "page": 1,
         "x": 1220, "y": 110, "w": 300, "color": GREEN, "note": "PRD 9 - one row per column",
         "cols": [
             ("id", "uuid", "PK"),
@@ -225,6 +235,7 @@ TABLES: dict[str, dict] = {
         ],
     },
     "kpi_definitions": {
+        "page": 1,
         "x": 1220, "y": 600, "w": 300, "color": PURPLE, "note": "PRD 11 - RCA contract",
         "cols": [
             ("id", "uuid", "PK"),
@@ -246,9 +257,146 @@ TABLES: dict[str, dict] = {
             ("updated_at", "timestamptz", ""),
         ],
     },
+    # --- evidence & investigation layer (page 3) --------------------------
+    "investigations": {
+        "page": 3,
+        "x": 40, "y": 110, "w": 330, "color": BLUE,
+        "note": "one run - see notes 11, 12",
+        "cols": [
+            ("id", "uuid", "PK"),
+            ("company_id", "uuid", ""),
+            ("dataset_id", "uuid", "FK"),
+            ("kpi_definition_id", "uuid", "FK"),
+            ("created_by", "uuid", "FK"),
+            ("question", "varchar(500)", ""),
+            ("status", "varchar(20)", ""),
+            ("analysis_state", "varchar(30)", ""),
+            ("kpi_name", "varchar(150)", ""),
+            ("measure_column", "varchar(255)", ""),
+            ("aggregation", "varchar(20)", ""),
+            ("time_column", "varchar(255)", ""),
+            ("comparison", "varchar(30)", ""),
+            ("grain", "varchar(20)", ""),
+            ("max_drivers", "integer", ""),
+            ("max_tree_depth", "integer", ""),
+            ("previous_period_start", "timestamptz", ""),
+            ("previous_period_end", "timestamptz", ""),
+            ("current_period_start", "timestamptz", ""),
+            ("current_period_end", "timestamptz", ""),
+            ("previous_value", "float", ""),
+            ("current_value", "float", ""),
+            ("absolute_change", "float", ""),
+            ("percentage_change", "float", ""),
+            ("change_direction", "varchar(10)", ""),
+            ("severity", "varchar(10)", ""),
+            ("rows_scanned", "bigint", ""),
+            ("rows_in_previous_period", "bigint", ""),
+            ("rows_in_current_period", "bigint", ""),
+            ("rows_outside_periods", "bigint", ""),
+            ("queries_executed", "integer", ""),
+            ("execution_time_ms", "integer", ""),
+            ("contribution_sum", "float", ""),
+            ("reconciliation_status", "varchar(20)", ""),
+            ("reconciliation_tolerance", "float", ""),
+            ("tree_drift_status", "varchar(20)", ""),
+            ("evidence_quality", "varchar(20)", ""),
+            ("evidence_count", "integer", ""),
+            ("result", "jsonb", ""),
+            ("tree", "jsonb", ""),
+            ("decisions", "jsonb", ""),
+            ("quality_checks", "jsonb", ""),
+            ("limitations", "jsonb", ""),
+            ("notices", "jsonb", ""),
+            ("engine_version", "varchar(20)", ""),
+            ("source_relation", "text", ""),
+            ("started_at", "timestamptz", ""),
+            ("completed_at", "timestamptz", ""),
+            ("error_code", "varchar(50)", ""),
+            ("error_message", "text", ""),
+            ("created_at", "timestamptz", ""),
+            ("updated_at", "timestamptz", ""),
+        ],
+    },
+    "investigation_evidence": {
+        "page": 3,
+        "x": 430, "y": 110, "w": 330, "color": TEAL,
+        "note": "one structured claim - see notes 13, 14",
+        "cols": [
+            ("id", "uuid", "PK"),
+            ("investigation_id", "uuid", "FK"),
+            ("company_id", "uuid", ""),
+            ("sequence", "integer", ""),
+            ("evidence_type", "varchar(30)", ""),
+            ("claim", "text", ""),
+            ("metric", "varchar(150)", ""),
+            ("dimension", "varchar(255)", ""),
+            ("dimension_value", "varchar(500)", ""),
+            ("dimension_value_is_null", "boolean", ""),
+            ("previous_period", "varchar(100)", ""),
+            ("current_period", "varchar(100)", ""),
+            ("previous_value", "float", ""),
+            ("current_value", "float", ""),
+            ("absolute_change", "float", ""),
+            ("percentage_change", "float", ""),
+            ("contribution_percentage", "float", ""),
+            ("explanatory_power", "float", ""),
+            ("filters", "jsonb", ""),
+            ("source_dataset", "varchar(255)", ""),
+            ("source_relation", "text", ""),
+            ("source_columns", "jsonb", ""),
+            ("query", "text", ""),
+            ("query_sequence", "integer", ""),
+            ("analysis_tool", "varchar(50)", ""),
+            ("validation_status", "varchar(20)", ""),
+            ("confidence", "varchar(10)", ""),
+            ("node_id", "varchar(500)", ""),
+            ("depth", "integer", ""),
+            ("classification", "varchar(20)", ""),
+            ("rank", "integer", ""),
+            ("details", "jsonb", ""),
+            ("created_at", "timestamptz", ""),
+        ],
+    },
+    "investigation_queries": {
+        "page": 3,
+        "x": 830, "y": 110, "w": 310, "color": MAROON,
+        "note": "the real SQL - see note 15",
+        "cols": [
+            ("id", "uuid", "PK"),
+            ("investigation_id", "uuid", "FK"),
+            ("sequence", "integer U", ""),
+            ("purpose", "varchar(40)", ""),
+            ("sql", "text", ""),
+            ("parameter_count", "integer", ""),
+            ("rows_returned", "integer", ""),
+            ("duration_ms", "integer", ""),
+            ("status", "varchar(10)", ""),
+            ("error", "varchar(500)", ""),
+            ("depth", "integer", ""),
+            ("node_id", "varchar(500)", ""),
+            ("created_at", "timestamptz", ""),
+        ],
+    },
+    "investigation_audit_events": {
+        "page": 3,
+        "x": 830, "y": 350, "w": 310, "color": AMBER,
+        "note": "append only - see note 16",
+        "cols": [
+            ("id", "uuid", "PK"),
+            ("investigation_id", "uuid", "FK"),
+            ("sequence", "integer", ""),
+            ("event_type", "varchar(40)", ""),
+            ("message", "text", ""),
+            ("elapsed_ms", "integer", ""),
+            ("occurred_at", "timestamptz", ""),
+            ("details", "jsonb", ""),
+            ("created_at", "timestamptz", ""),
+        ],
+    },
 }
 
 # (from, to, cardinality, on-delete, waypoints, dashed)
+# Drawn on the page its source table lives on.
 EDGES = [
     ("companies", "users", "1:N", "CASCADE", [(190, 197), (190, 250)], False),
     ("companies", "sql_connections", "1:N", "CASCADE",
@@ -274,6 +422,14 @@ EDGES = [
      [(1130, 300), (1220, 300)], False),
     ("kpi_definitions", "schema_validations", "1:N", "CASCADE",
      [(1220, 660), (1180, 660), (1180, 700), (1130, 700)], False),
+    # --- evidence & investigation layer -----------------------------------
+    ("investigations", "investigation_evidence", "1:N", "CASCADE",
+     [(370, 280), (430, 280)], False),
+    # Routed below investigation_evidence, whose box ends at y=561.
+    ("investigations", "investigation_queries", "1:N", "CASCADE",
+     [(370, 620), (795, 620), (795, 206), (830, 206)], False),
+    ("investigations", "investigation_audit_events", "1:N", "CASCADE",
+     [(370, 680), (812, 680), (812, 420), (830, 420)], False),
 ]
 
 
@@ -387,8 +543,10 @@ def draw_table(c: Canvas, name: str) -> None:
     c.text(x, y - 5, t["note"], size=6.6, color=MUTED)
 
 
-def draw_edges(c: Canvas) -> None:
+def draw_edges(c: Canvas, page: int) -> None:
     for src, dst, card, ondelete, pts, dashed in EDGES:
+        if TABLES[src]["page"] != page:
+            continue
         colour = (0.62, 0.66, 0.72) if dashed else MUTED
         c.line(pts, color=colour, width=0.9, dashed=dashed)
 
@@ -432,9 +590,10 @@ def page_one() -> bytes:
            align="right", mono=True)
     c.line([(40, 76), (PAGE_W - 40, 76)], color=LINE, width=0.8)
 
-    draw_edges(c)
-    for name in TABLES:
-        draw_table(c, name)
+    draw_edges(c, 1)
+    for name, t in TABLES.items():
+        if t["page"] == 1:
+            draw_table(c, name)
 
     # Legend
     ly = 906
@@ -502,6 +661,39 @@ NOTES = [
      "the test suite runs the identical schema against SQLite."),
 ]
 
+# Notes for the evidence and investigation layer, rendered beside it on page 3
+# rather than on page 2, so each page carries its own explanation.
+INVESTIGATION_NOTES = [
+    ("11", "The execution metrics and verdicts are columns, not JSON.",
+     "rows_scanned through evidence_quality are what the Evidence panel shows first, and they are "
+     "worth filtering on - 'every failed reconciliation this week' should be one indexed query. The "
+     "findings payload behind them is never queried into, so result, tree, decisions, quality_checks, "
+     "limitations and notices stay in JSON."),
+    ("12", "reconciliation_tolerance records the value actually applied.",
+     "The correctness invariant in app/analysis/rca/constants.py is deliberately not tunable, because "
+     "a tunable one would let a lost-rows bug be configured into a green tick. The reporting tolerance "
+     "beside it is configurable, so it is persisted per run: a raised tolerance shows up in the record "
+     "rather than only in the environment."),
+    ("13", "investigation_evidence.company_id is denormalised.",
+     "GET /api/evidence/{id} carries no dataset in its path, so tenant scoping would otherwise need a "
+     "join through investigations on every lazy-loaded read. The same reasoning as "
+     "column_profiles.dataset_id in note 5, and both paths are ON DELETE CASCADE."),
+    ("14", "explanatory_power has its own column, never folded into contribution.",
+     "Contribution is how much a segment moved the total; explainability is how far the segments "
+     "deviated from moving in proportion to their size. Movements in opposite directions add to the "
+     "deviation without adding to the net change, so explainability is not a share and can exceed "
+     "100%. Storing them in one column would make that look like a bug."),
+    ("15", "investigation_queries stores the SQL but never the parameters.",
+     "The text is the statement handed to DuckDB, verbatim, so 'seven queries in 141 ms' is "
+     "inspectable rather than merely asserted. Filters and drill predicates bind their values, so a "
+     "parameter can be a customer name - hence parameter_count and no parameters column, the same "
+     "reasoning that pins sqlalchemy.engine logging to WARNING."),
+    ("16", "elapsed_ms is the reproducible field, occurred_at is not.",
+     "An audit event records a monotonic offset from the run's start, which is identical across two "
+     "runs of the same data; the wall-clock timestamp is derived from it for display. This mirrors the "
+     "engine resolving periods against the data's own maximum rather than the clock."),
+]
+
 
 def page_two() -> bytes:
     c = Canvas()
@@ -542,24 +734,95 @@ def page_two() -> bytes:
     return c.stream()
 
 
+def wrap_note(c: Canvas, x: float, y: float, width: float, num: str, title: str, body: str) -> float:
+    """Draw one numbered note and return the y to continue from."""
+    c.rect(x, y - 9.5, 15, 13, fill=BLUE)
+    c.text(x + 7.5, y, num, size=7.4, color=WHITE, bold=True, align="center")
+    c.text(x + 23, y, title, size=8.8, color=INK, bold=True)
+
+    yy = y + 15
+    line = ""
+    for word in body.split():
+        trial = f"{line} {word}".strip()
+        if text_width(trial, 7.8) > width - 23:
+            c.text(x + 23, yy, line, size=7.8, color=(0.32, 0.35, 0.40))
+            yy += 11
+            line = word
+        else:
+            line = trial
+    if line:
+        c.text(x + 23, yy, line, size=7.8, color=(0.32, 0.35, 0.40))
+        yy += 11
+    return yy
+
+
+def page_three() -> bytes:
+    """The evidence and investigation layer.
+
+    A page of its own because the four tables are wide and because their foreign
+    keys reach back to datasets, kpi_definitions and users on page 1 - which an
+    edge cannot express across a page break, so note 17 says it in words.
+    """
+    c = Canvas()
+    c.rect(0, 0, PAGE_W, PAGE_H, fill=WHITE)
+
+    c.text(40, 46, "Evidence + Investigation Layer", size=19, color=INK, bold=True)
+    c.text(40, 64, "Persisted investigations, structured evidence, query trace and audit trail",
+           size=9.2, color=MUTED)
+    c.text(PAGE_W - 40, 46, "4 tables  |  6 foreign keys", size=9, color=MUTED, align="right")
+    c.text(PAGE_W - 40, 62, "generated from backend/app/db/models/investigation.py", size=7.6,
+           color=MUTED, align="right", mono=True)
+    c.line([(40, 76), (PAGE_W - 40, 76)], color=LINE, width=0.8)
+
+    draw_edges(c, 3)
+    for name, t in TABLES.items():
+        if t["page"] == 3:
+            draw_table(c, name)
+
+    # Notes column, to the right of the tables.
+    nx, ny, nw = 1180, 112, PAGE_W - 40 - 1180
+    for num, title, body in INVESTIGATION_NOTES:
+        ny = wrap_note(c, nx, ny, nw, num, title, body) + 15
+
+    wrap_note(
+        c, nx, ny, nw, "17",
+        "Three foreign keys point back to page 1.",
+        "investigations.dataset_id is ON DELETE CASCADE - an investigation whose underlying rows are "
+        "gone can no longer be verified against them, and keeping it would be misleading. "
+        "kpi_definition_id and created_by are ON DELETE SET NULL, so editing a KPI or removing a user "
+        "does not destroy the history of what was already found.",
+    )
+
+    c.text(40, PAGE_H - 34,
+           "Source of truth: backend/app/db/models/  -  regenerate with  python scripts/generate_erd.py",
+           size=7.4, color=MUTED, mono=True)
+    return c.stream()
+
+
 def build_pdf() -> bytes:
-    streams = [page_one(), page_two()]
+    streams = [page_one(), page_two(), page_three()]
     objects: list[bytes] = []
 
-    # 1 catalog, 2 pages, 3/5 pages, 4/6 contents, 7-9 fonts
+    # Object numbering: 1 catalog, 2 page tree, then a (page, contents) pair per
+    # page, then the three fonts. Computed rather than hardcoded so adding a page
+    # is a one-line change to ``streams``.
+    page_numbers = [3 + i * 2 for i in range(len(streams))]
+    first_font = 3 + len(streams) * 2
+    kids = " ".join(f"{n} 0 R" for n in page_numbers)
+
     objects.append(b"<< /Type /Catalog /Pages 2 0 R >>")
-    objects.append(b"<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>")
+    objects.append(f"<< /Type /Pages /Kids [{kids}] /Count {len(streams)} >>".encode())
     for i, s in enumerate(streams):
-        page_no, content_no = 3 + i * 2, 4 + i * 2
+        content_no = 4 + i * 2
         objects.append(
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {PAGE_W:.0f} {PAGE_H:.0f}] "
-            f"/Resources << /Font << /F1 7 0 R /F2 8 0 R /F3 9 0 R >> >> "
+            f"/Resources << /Font << /F1 {first_font} 0 R /F2 {first_font + 1} 0 R "
+            f"/F3 {first_font + 2} 0 R >> >> "
             f"/Contents {content_no} 0 R >>".encode()
         )
         objects.append(
             f"<< /Length {len(s)} >>\nstream\n".encode() + s + b"\nendstream"
         )
-        assert page_no  # layout guard
     for base in ("Helvetica", "Helvetica-Bold", "Courier"):
         objects.append(
             f"<< /Type /Font /Subtype /Type1 /BaseFont /{base} /Encoding /WinAnsiEncoding >>".encode()

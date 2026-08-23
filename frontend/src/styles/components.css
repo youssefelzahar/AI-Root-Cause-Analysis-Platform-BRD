@@ -409,6 +409,69 @@
   color: #0f5a4e;
 }
 
+/* --------------------------------------------------------------- dialog */
+/* Native <dialog>: the top layer, focus trap, Escape and backdrop all come from
+   the element, so showModal()/close() is the only JavaScript. --z-dialog has
+   been reserved in tokens.css since Phase 1 with nothing to use it. */
+.dialog {
+  background: transparent;
+  border: 0;
+  margin: auto;
+  max-width: min(720px, calc(100vw - 2 * var(--space-4)));
+  padding: 0;
+  width: 100%;
+  z-index: var(--z-dialog);
+}
+
+.dialog-lg {
+  max-width: min(1040px, calc(100vw - 2 * var(--space-4)));
+}
+
+.dialog::backdrop {
+  background: rgba(23, 32, 38, 0.45);
+}
+
+.dialog-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: calc(100vh - 2 * var(--space-5));
+}
+
+.dialog-head {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding: var(--space-4);
+}
+
+.dialog-head h2 {
+  font-size: 15px;
+}
+
+.dialog-head p {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.dialog-body {
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.dialog-foot {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-4);
+}
+
 /* ----------------------------------------------------------------- tabs */
 .tablist {
   border-bottom: 1px solid var(--line);
@@ -606,15 +669,6 @@
   border-color: var(--teal);
 }
 
-.dropzone .visually-hidden {
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  height: 1px;
-  overflow: hidden;
-  position: absolute;
-  white-space: nowrap;
-  width: 1px;
-}
 
 /* ------------------------------------------------------------- progress */
 .progress {
@@ -703,6 +757,18 @@
 }
 
 /* ------------------------------------------------------------ utilities */
+/* Unscoped: the dropzone used to own this, but any control whose only visible
+   label is an icon needs it - including the evidence quality checks. */
+.visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .definition-list {
   display: grid;
   gap: var(--space-3);
@@ -1000,6 +1066,317 @@
   .rca-waterfall-row {
     grid-template-columns: minmax(0, 110px) 1fr 90px;
   }
+
+  .evidence-summary {
+    gap: var(--space-3);
+  }
+
+  .evidence-check {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .evidence-check-detail {
+    grid-column: 2;
+  }
+
+  .audit-event {
+    grid-template-columns: minmax(0, 1fr) 60px;
+  }
+
+  .audit-at {
+    grid-column: 1 / -1;
+  }
+
+  .dialog,
+  .dialog-lg {
+    max-width: 100vw;
+  }
+
+  .dialog-panel {
+    border-radius: 0;
+    max-height: 100vh;
+  }
+}
+
+/* ------------------------------------------------- evidence & validation */
+/* A different edge from .panel on purpose: Evidence has to read as a separate
+   band inside the investigation, not as one more panel in the stack. It answers
+   a different question - "why should I trust this?" rather than "what did we
+   find?" */
+.evidence-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.evidence-summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  list-style: none;
+  padding: var(--space-4);
+}
+
+/* display:flex drops the marker in Chrome; Safari needs the pseudo-element. */
+.evidence-summary::marker {
+  content: "";
+}
+
+.evidence-summary::-webkit-details-marker {
+  display: none;
+}
+
+.evidence-chevron {
+  color: var(--muted);
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+.evidence-section[open] > .evidence-summary .evidence-chevron {
+  transform: rotate(90deg);
+}
+
+.evidence-metric {
+  display: grid;
+  gap: 1px;
+}
+
+.evidence-metric > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.evidence-metric strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.evidence-metric small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.evidence-body {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-4);
+}
+
+.evidence-block {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.evidence-block-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evidence-note {
+  font-size: 12px;
+}
+
+.evidence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.evidence-checks {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.evidence-check {
+  align-items: start;
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: 18px minmax(0, 210px) minmax(0, 1fr);
+}
+
+.evidence-check-icon {
+  line-height: 1;
+}
+
+/* A second channel besides colour, as elsewhere in this file. */
+.evidence-check.passed .evidence-check-icon {
+  color: var(--teal);
+}
+
+.evidence-check.warning .evidence-check-icon {
+  color: var(--amber);
+}
+
+.evidence-check.failed .evidence-check-icon {
+  color: var(--red);
+}
+
+.evidence-check.not_applicable .evidence-check-icon {
+  color: var(--muted);
+}
+
+.evidence-check-name {
+  font-weight: 700;
+}
+
+.evidence-check-detail {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Explainability is unsigned, so it reuses the one-way .freq-bar rather than the
+   diverging .rca-bar. Two visibly different bar shapes make "share of the
+   change" and "how differently the parts moved" impossible to confuse. This
+   marks the values that run off the end of the track. */
+.evidence-power-over {
+  border-right: 2px solid var(--ink);
+}
+
+/* Anchor targets for the tree's evidence links. No scroll-behavior: smooth -
+   base.css's reduced-motion block zeroes transitions but does not cover it. */
+.evidence-records {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 420px;
+  overflow: auto;
+}
+
+.evidence-record {
+  border-left: 3px solid var(--line);
+  padding: var(--space-2) var(--space-3);
+  scroll-margin-top: var(--space-5);
+}
+
+.evidence-record:target {
+  background: var(--surface-2);
+  border-left-color: var(--info);
+}
+
+.evidence-record-claim {
+  font-size: 14px;
+}
+
+.evidence-record-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.decision-trace {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.decision {
+  border-left: 3px solid var(--line);
+  padding: var(--space-2) var(--space-3);
+}
+
+.decision-kind {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.decision-subject {
+  font-size: 14px;
+}
+
+.decision-why {
+  font-size: 13px;
+}
+
+.audit-trail {
+  display: grid;
+  gap: 2px;
+}
+
+.audit-event {
+  align-items: baseline;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 170px minmax(0, 1fr) 70px;
+  padding: 4px 0;
+}
+
+.audit-at,
+.audit-ms {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.audit-ms {
+  text-align: right;
+}
+
+.query-trace {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.query-trace-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.query-trace-head {
+  align-items: center;
+  background: var(--surface-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.query-trace-purpose {
+  font-weight: 700;
+}
+
+.query-trace-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* <pre>, not textarea.textarea-code: the SQL is not editable, and a textarea in
+   a dialog steals the initial focus and is announced as an input. */
+.query-trace-sql {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-x: auto;
+  padding: var(--space-3);
+  white-space: pre;
+}
+
+/* Sits inside the label column, so .rca-node-row's grid is unchanged and the
+   720px reflow needs no edit for it. */
+.rca-node-evidence {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: var(--space-2);
+  white-space: nowrap;
+}
+
+.rca-node-evidence:hover {
+  color: var(--info);
+}
+
+/* Copies .rca-node-note's geometry rather than reusing the class, so the two
+   kinds of note under a row can be tinted apart later. */
+.rca-node-stop {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 4px 30px;
 }
 
 /* ------------------------------------------------------------ delete */

@@ -180,6 +180,7 @@ def build_nodes(
     depth: int = 1,
     parent_path: tuple[tuple[str, str | None], ...] = (),
     parent_change: float | None = None,
+    gross_denominator: float | None = None,
 ) -> list[DriverNode]:
     """Turn one level's segment totals into nodes carrying full evidence.
 
@@ -188,8 +189,14 @@ def build_nodes(
     100% of a parent that is itself 2% of the total would otherwise render as
     "100%" and read as the headline cause. The local view is carried separately
     as ``share_of_parent_change``.
+
+    ``gross_denominator`` carries that same rule into the gross-movement basis,
+    where the denominator is a sum over the level rather than a single total.
+    Recomputing it per level would renormalise every child against its own
+    siblings, so a child could show 77% under a 50% parent. Callers descending
+    the tree pass the level-1 value down; level 1 itself computes it.
     """
-    gross = gross_movement(segments)
+    gross = gross_movement(segments) if gross_denominator is None else gross_denominator
     level_change = totals.absolute_change
     denominator = global_change
 
@@ -285,17 +292,28 @@ def build_nodes(
     return nodes
 
 
-def contribution_sum(nodes: list[DriverNode]) -> float | None:
-    """The invariant to watch.
+def contribution_sum(
+    nodes: list[DriverNode],
+    *,
+    basis: AttributionBasis = AttributionBasis.NET_CHANGE,
+) -> float | None:
+    """The invariant to watch. 1.0 under every basis.
 
-    Should be 1.0. Drift means rows were lost - a dropped null group, or a
-    truncated dimension whose residual bucket went missing. This is reported
-    rather than normalised away, because re-normalising would hide the bug
-    permanently.
+    Drift means rows were lost - a dropped null group, or a truncated dimension
+    whose residual bucket went missing. This is reported rather than normalised
+    away, because re-normalising would hide the bug permanently.
+
+    Gross-movement contributions are shares of ``sum |delta|``, so it is their
+    *magnitudes* that sum to 1; their signed sum is net/gross, which sits below
+    NET_TO_GROSS_MIN_RATIO by construction - that ratio is precisely what
+    selected the basis. Summing signed there would report the invariant as
+    permanently broken on every such investigation.
     """
     values = [n.contribution for n in nodes if n.contribution is not None]
     if not values:
         return None
+    if basis is AttributionBasis.GROSS_MOVEMENT:
+        return sum(abs(v) for v in values)
     return sum(values)
 
 

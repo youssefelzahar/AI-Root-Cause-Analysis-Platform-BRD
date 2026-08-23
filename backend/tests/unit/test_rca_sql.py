@@ -279,6 +279,28 @@ def test_a_single_period_dataset_reports_no_previous_period(tmp_path):
     assert result.primary_drivers == ()
 
 
+def test_a_single_period_dataset_does_not_claim_a_rise_against_nothing(tmp_path):
+    """``Totals.absolute_change`` reads a missing previous period as
+    ``current - 0``, so the generic sentence reported that the KPI "increased
+    versus the previous period" when there is no previous period at all."""
+    content = """order_date,region,revenue
+2026-07-15,Cairo,1000
+2026-07-16,Giza,500
+"""
+    result = _run(_write(tmp_path, content), _spec(dimensions=("region",)))
+    assert "increased" not in result.summary
+    assert "no earlier period" in result.summary
+
+
+def test_an_unattributable_aggregation_says_why_it_names_no_driver(tmp_path):
+    """"No individual segment accounts for a material share" would assert that
+    contributions were computed and came back empty. None were computed."""
+    result = _run(_write(tmp_path, GOLDEN), _spec(aggregation=Aggregation.MEDIAN))
+    assert result.state is AnalysisState.UNATTRIBUTABLE
+    assert "cannot be split across segments" in result.summary
+    assert "material share" not in result.summary
+
+
 def test_a_kpi_that_did_not_change_says_so_rather_than_naming_drivers(tmp_path):
     content = """order_date,region,revenue
 2026-06-15,Cairo,1000
@@ -325,6 +347,57 @@ def test_large_cancelling_movements_switch_to_shares_of_gross_movement(tmp_path)
     assert sum(abs(node.contribution) for node in nodes) == pytest.approx(1.0)
 
 
+def test_gross_movement_reports_the_contribution_sum_as_one(tmp_path):
+    """Under this basis it is the magnitudes that sum to 1; the signed sum is
+    net/gross, which sits under NET_TO_GROSS_MIN_RATIO by construction because
+    that ratio is what selected the basis. Reporting signed here rendered
+    "contributions add up to 0.5%" on every gross-movement investigation."""
+    content = """order_date,region,revenue
+2026-06-15,Cairo,1000
+2026-06-15,Giza,1000
+2026-07-15,Cairo,1990
+2026-07-15,Giza,20
+"""
+    result = _run(_write(tmp_path, content), _spec(dimensions=("region",)))
+    assert result.attribution.basis is AttributionBasis.GROSS_MOVEMENT
+    assert result.evidence.contribution_sum == pytest.approx(1.0)
+
+
+def test_the_tree_holds_together_under_gross_movement(tmp_path):
+    """Children sum to their parent at every depth, including the root.
+
+    The gross denominator has to be the level-1 one all the way down. Recomputed
+    per level it renormalises each child against its own siblings, so a child
+    could show 77% under a 50% parent - and the root, fixed at 1.0, drifted from
+    children summing to net/gross.
+    """
+    content = """order_date,region,product,revenue
+2026-06-15,Cairo,A,600
+2026-06-15,Cairo,B,400
+2026-06-15,Giza,A,600
+2026-06-15,Giza,B,400
+2026-07-15,Cairo,A,1500
+2026-07-15,Cairo,B,490
+2026-07-15,Giza,A,10
+2026-07-15,Giza,B,10
+"""
+    result = _run(
+        _write(tmp_path, content), _spec(dimensions=("region", "product"))
+    )
+    assert result.attribution.basis is AttributionBasis.GROSS_MOVEMENT
+
+    def walk(node):
+        yield node
+        for child in node.children:
+            yield from walk(child)
+
+    parents = [n for n in walk(result.tree) if n.children]
+    assert parents, "the tree never branched, so nothing was verified"
+    for node in parents:
+        children = sum(c.contribution for c in node.children if c.contribution is not None)
+        assert children == pytest.approx(node.contribution)
+
+
 def test_a_proportional_change_is_reported_as_broad_based(tmp_path):
     """Every region halved, so no region explains it more than any other."""
     content = """order_date,region,revenue
@@ -348,6 +421,8 @@ def test_a_kpi_with_no_dimensions_still_reports_the_change(tmp_path):
     assert result.kpi.absolute_change == pytest.approx(-300.0)
     assert result.primary_drivers == ()
     assert any(n.code == "NO_DIMENSIONS_CONFIGURED" for n in result.notices)
+    # Not "no segment accounts for a material share": there was nothing to split.
+    assert "no analysis dimensions" in result.summary
 
 
 def test_a_kpi_without_a_time_column_cannot_be_compared(tmp_path):
@@ -372,6 +447,81 @@ def test_a_high_cardinality_dimension_is_truncated_with_a_notice(tmp_path):
     # The remainder is folded into an exact residual, so the total still holds.
     assert any(node.is_other_bucket for node in nodes)
     assert result.evidence.contribution_sum == pytest.approx(1.0)
+
+
+def test_the_lower_of_the_two_segment_caps_governs_truncation(tmp_path):
+    """The row cap and the display cap have to resolve to one number.
+
+    Clamping the query to the lower while testing ``truncated`` against the
+    higher meant a low RCA_MAX_SEGMENTS_SCANNED dropped segments with no residual
+    bucket, no notice, and a contribution sum that quietly fell to 12.5%.
+    """
+    rows = ["order_date,region,revenue"]
+    for i in range(80):
+        rows.append(f"2026-06-15,r{i},{100 + i}")
+        rows.append(f"2026-07-15,r{i},{90 + i}")
+    result = _run(
+        _write(tmp_path, "\n".join(rows) + "\n"),
+        _spec(
+            dimensions=("region",),
+            max_values_per_dimension=50,
+            max_segments_scanned=10,
+        ),
+    )
+    assert any(n.code == "DIMENSION_TRUNCATED" for n in result.notices)
+    summary = next(s for s in result.dimensions_analysed if s.dimension == "region")
+    assert summary.truncated
+    nodes = [node for _, group in result.dimension_results for node in group]
+    assert any(node.is_other_bucket for node in nodes)
+    assert result.evidence.contribution_sum == pytest.approx(1.0)
+
+
+def test_segments_come_back_in_a_stable_order(tmp_path):
+    """QUALIFY chooses which rows survive, not the order they arrive in.
+
+    Every consumer downstream sorts stably, so without an explicit ORDER BY two
+    identical requests could disagree on which of several tied segments
+    headlines the summary and which the tree descends into. Ties break on the
+    segment name: Cairo before Giza.
+    """
+    content = """order_date,region,revenue
+2026-06-15,Cairo,1000
+2026-06-15,Giza,1000
+2026-06-15,Luxor,1000
+2026-06-15,Aswan,1000
+2026-07-15,Cairo,700
+2026-07-15,Giza,700
+2026-07-15,Luxor,500
+2026-07-15,Aswan,1000
+"""
+    result = _run(_write(tmp_path, content), _spec(dimensions=("region",)))
+    order = [node.value for _, group in result.dimension_results for node in group]
+    assert order == ["Luxor", "Cairo", "Giza", "Aswan"]
+
+
+def test_the_residual_bucket_is_left_unranked(tmp_path):
+    """``(other)`` holds every unlisted segment's movement at once, so ranking it
+    alongside real segments could put it above all of them. It is excluded from
+    the ranked set for the same reason it is excluded from the driver lists;
+    rank 0 means unranked.
+
+    One region carries the whole move so the dimension clears
+    MIN_EXPLANATORY_POWER and ``classify`` actually runs - with every region
+    moving alike, no dimension is worth descending and nothing is ranked at all.
+    """
+    rows = ["order_date,region,revenue"]
+    for i in range(80):
+        rows.append(f"2026-06-15,r{i:02d},1000")
+        rows.append(f"2026-07-15,r{i:02d},{200 if i == 0 else 1000}")
+    result = _run(
+        _write(tmp_path, "\n".join(rows) + "\n"),
+        _spec(dimensions=("region",), max_values_per_dimension=50),
+    )
+    nodes = [node for _, group in result.dimension_results for node in group]
+    residual = next(node for node in nodes if node.is_other_bucket)
+    assert residual.rank == 0
+    assert [n.value for n in result.primary_drivers] == ["r00"]
+    assert all(node.rank >= 1 for node in nodes if not node.is_other_bucket)
 
 
 def test_equal_contributors_are_all_reported(tmp_path):

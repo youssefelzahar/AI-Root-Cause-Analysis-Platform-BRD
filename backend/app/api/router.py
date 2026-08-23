@@ -6,6 +6,7 @@ from app.api.routes import (
     anomalies,
     context,
     datasets,
+    investigations,
     rca,
     sql_connections,
     sql_editor,
@@ -20,3 +21,5 @@ api_router.include_router(sql_connections.router)
 api_router.include_router(sql_editor.router)
 api_router.include_router(rca.router)
 api_router.include_router(anomalies.router)
+api_router.include_router(investigations.router)
+api_router.include_router(investigations.evidence_router)

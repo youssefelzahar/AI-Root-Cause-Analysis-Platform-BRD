@@ -1,0 +1,44 @@
+review_date,airline,sentiment,cabin,value_for_money
+2026-06-15,Aer Lingus,negative,Business,3
+2026-06-15,Aer Lingus,negative,Business,3
+2026-06-15,Air India,neutral,Economy,2
+2026-06-15,Air India,neutral,Economy,3
+2026-06-15,Air India,positive,Economy,2
+2026-06-15,Emirates,neutral,Premium,3
+2026-06-15,Emirates,neutral,Premium,3
+2026-06-15,Korean Air,neutral,Premium,3
+2026-06-15,Korean Air,neutral,Premium,3
+2026-06-15,LOT Polish Airlines,positive,Economy,4
+2026-06-15,LOT Polish Airlines,positive,Economy,4
+2026-06-15,Saudia,positive,Economy,2
+2026-06-15,Saudia,positive,Economy,2
+2026-06-15,Saudia,positive,Economy,4
+2026-06-15,Singapore Airlines,positive,Economy,3
+2026-06-15,Singapore Airlines,positive,Economy,3
+2026-06-15,Singapore Airlines,positive,Economy,3
+2026-06-15,Singapore Airlines,positive,Economy,3
+2026-06-15,TAP Portugal,negative,Premium,3
+2026-06-15,TAP Portugal,neutral,Premium,3
+2026-06-15,Turkish Airlines,negative,Business,3
+2026-06-15,Turkish Airlines,negative,Business,3
+2026-07-15,Aer Lingus,negative,Business,2
+2026-07-15,Aer Lingus,negative,Business,2
+2026-07-15,Aer Lingus,negative,Business,3
+2026-07-15,Air India,positive,Economy,2
+2026-07-15,Air India,positive,Economy,3
+2026-07-15,Emirates,neutral,Economy,3
+2026-07-15,Emirates,neutral,Premium,2
+2026-07-15,Korean Air,neutral,Economy,2
+2026-07-15,Korean Air,neutral,Economy,2
+2026-07-15,Korean Air,positive,Economy,1
+2026-07-15,LOT Polish Airlines,positive,Economy,3
+2026-07-15,LOT Polish Airlines,positive,Economy,3
+2026-07-15,Saudia,positive,Economy,3
+2026-07-15,Saudia,positive,Economy,3
+2026-07-15,TAP Portugal,neutral,Premium,2
+2026-07-15,TAP Portugal,neutral,Premium,2
+2026-07-15,TAP Portugal,neutral,Premium,2
+2026-07-15,TAP Portugal,neutral,Premium,2
+2026-07-15,Turkish Airlines,negative,Business,3
+2026-07-15,Turkish Airlines,negative,Premium,3
+2026-07-15,Turkish Airlines,neutral,Premium,2

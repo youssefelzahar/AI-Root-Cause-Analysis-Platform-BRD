@@ -9,78 +9,24 @@ Nothing is persisted - an investigation is recomputed on request.
 
 import uuid
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.analysis.rca import run_investigation, verify_tree
-from app.analysis.rca.constants import (
-    MAX_PRIMARY_DRIVERS,
-    MAX_TREE_DEPTH,
-    MAX_VALUES_PER_DIMENSION,
-)
+from app.analysis.rca.constants import MAX_PRIMARY_DRIVERS, MAX_TREE_DEPTH
 from app.analysis.rca.models import RcaResult, RcaSpec
 from app.core.config import settings
-from app.core.exceptions import NotFoundError, NotReadyError, ValidationError
+from app.core.exceptions import NotReadyError, ValidationError
 from app.core.logging import get_logger
 from app.db.models.dataset import Dataset
 from app.db.models.enums import Aggregation, ComparisonPeriod, DatasetStatus
 from app.db.models.kpi import KpiDefinition
-from app.db.models.profile import ColumnProfile, DatasetProfile
 from app.services import dataset_service, kpi_service
 from app.services.dataset_source import open_dataset_relation
 
 logger = get_logger(__name__)
 
 
-def _resolve_definition(
-    db: Session, dataset: Dataset, kpi_definition_id: uuid.UUID | None
-) -> KpiDefinition:
-    """The definition to analyse: an explicit one, or the dataset's active one.
-
-    An id belonging to a different dataset returns 404 rather than leaking that
-    it exists.
-    """
-    if kpi_definition_id is None:
-        return kpi_service.get_active_definition(db, dataset)
-
-    record = db.scalar(
-        select(KpiDefinition).where(
-            KpiDefinition.id == kpi_definition_id,
-            KpiDefinition.dataset_id == dataset.id,
-        )
-    )
-    if record is None:
-        raise NotFoundError(
-            "That KPI definition does not exist for this dataset.",
-            code="KPI_DEFINITION_NOT_FOUND",
-        )
-    return record
-
-
-def _detected_frequency(db: Session, dataset: Dataset, time_column: str | None) -> str | None:
-    """The profiler's reporting-frequency finding for the KPI's time column.
-
-    Already null below 0.6 confidence, so an absent value genuinely means "we
-    could not tell" - which the engine handles by splitting the range in half
-    rather than assuming a calendar grain.
-    """
-    if not time_column:
-        return None
-    profile = db.scalar(select(DatasetProfile).where(DatasetProfile.dataset_id == dataset.id))
-    if profile is None:
-        return None
-    column = db.scalar(
-        select(ColumnProfile).where(
-            ColumnProfile.dataset_profile_id == profile.id,
-            ColumnProfile.column_name == time_column,
-        )
-    )
-    if column is None:
-        return None
-    return (column.datetime_stats or {}).get("detected_frequency")
-
-
-def _build_spec(
+def build_spec(
     definition: KpiDefinition,
     frequency: str | None,
     *,
@@ -135,7 +81,7 @@ def _build_spec(
         detected_frequency=frequency,
         max_drivers=max_drivers,
         max_tree_depth=max_tree_depth,
-        max_values_per_dimension=MAX_VALUES_PER_DIMENSION,
+        max_values_per_dimension=settings.rca_max_values_per_dimension,
         max_segments_scanned=settings.rca_max_segments_scanned,
     )
 
@@ -160,9 +106,9 @@ def run(
             details={"status": dataset.status},
         )
 
-    definition = _resolve_definition(db, dataset, kpi_definition_id)
-    frequency = _detected_frequency(db, dataset, definition.time_column)
-    spec = _build_spec(
+    definition = kpi_service.resolve_definition(db, dataset, kpi_definition_id)
+    frequency = kpi_service.detected_frequency(db, dataset, definition.time_column)
+    spec = build_spec(
         definition, frequency, max_drivers=max_drivers, max_tree_depth=max_tree_depth
     )
 

@@ -24,15 +24,20 @@ async def lifespan(_: FastAPI):
             logger.warning("storage_dir_unavailable", extra={"path": directory})
 
     # Background jobs run in-process, so a restart can strand a dataset in
-    # `profiling`. Reconcile those on the way up.
+    # `profiling`. An investigation runs inside one request, so a restart can
+    # strand one of those mid-flight too. Reconcile both on the way up.
     try:
         from app.db.session import session_scope
+        from app.services.investigation_service import reconcile_stale_investigations
         from app.services.profiling_service import reconcile_stale_jobs
 
         with session_scope() as db:
             recovered = reconcile_stale_jobs(db)
             if recovered:
                 logger.warning("stale_profiling_jobs_reconciled", extra={"count": recovered})
+            abandoned = reconcile_stale_investigations(db)
+            if abandoned:
+                logger.warning("stale_investigations_reconciled", extra={"count": abandoned})
     except Exception:
         # A database that is not ready must not stop the app from booting.
         logger.warning("startup_reconcile_skipped")
