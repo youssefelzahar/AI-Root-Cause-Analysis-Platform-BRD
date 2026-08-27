@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    ai,
     anomalies,
     context,
     datasets,
@@ -23,3 +24,4 @@ api_router.include_router(rca.router)
 api_router.include_router(anomalies.router)
 api_router.include_router(investigations.router)
 api_router.include_router(investigations.evidence_router)
+api_router.include_router(ai.router)

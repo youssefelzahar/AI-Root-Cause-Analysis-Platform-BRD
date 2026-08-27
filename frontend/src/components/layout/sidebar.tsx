@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Brain, Database, LineChart, Server } from "lucide-react";
+import { Activity, Brain, Database, LineChart, Server, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -11,6 +11,9 @@ const NAV = [
   // comes before "why did it change?".
   { href: "/anomalies", label: "Anomalies", icon: Activity },
   { href: "/investigations", label: "Investigations", icon: LineChart },
+  // Last because it is the way in for someone who does not yet know which of the
+  // three surfaces above answers their question.
+  { href: "/ai-analyst", label: "Ask", icon: Sparkles },
 ];
 
 export function Sidebar() {

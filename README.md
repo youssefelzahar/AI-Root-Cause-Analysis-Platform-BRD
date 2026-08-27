@@ -2,16 +2,19 @@
 
 Implementation of the platform described in `plans/AI_Root_Cause_Analysis_Platform_PRD_v3.pdf`.
 
-**Phase 1 — Data Foundation** and **Phase 2 — Root Cause Analysis Engine** are both complete. A
-user uploads a CSV/Excel file or runs a SQL Server query and saves its output; the dataset is
-validated and profiled; the user configures a normalized KPI definition that marks it **Analysis
-Ready**; and the RCA engine then explains why that KPI changed, naming the segments behind the
-movement with the evidence for each claim.
+**Phase 1 — Data Foundation**, **Phase 2 — Root Cause Analysis Engine**, **Phase 3 — Evidence &
+Investigation** and **Phase 4 — AI Analyst** are all complete. A user uploads a CSV/Excel file or
+runs a SQL Server query and saves its output; the dataset is validated and profiled; the user
+configures a normalized KPI definition that marks it **Analysis Ready**; the RCA engine explains why
+that KPI changed, naming the segments behind the movement with the evidence for each claim; and the
+AI analyst lets that whole pipeline be reached with a question in English.
 
 ```
 Upload / Connect Dataset → Schema Validation → Data Profiling
     → KPI Detection → User KPI Selection → KPI Definition
     → RCA Engine → Ranked Drivers + Hierarchical Tree
+    → Evidence + Validation → Persisted Investigation
+    → AI Analyst → Grounded Business Answer
 ```
 
 > ⚠️ **This deployment has no authentication.** Per the project decision, Phase 1 ships without
@@ -245,7 +248,69 @@ dead vocabulary.
 into differently named temp tables), filling the `anomaly` and `trend` evidence types. Its failure is
 a limitation, never a 5xx.
 
-### 1.9 Frontend
+### 1.9 AI Analyst layer (Phase 4)
+
+The analysis above is correct and provable, but only reachable by someone who already knows to pick a
+dataset, configure a KPI and read a contribution table. This phase adds the layer that takes a
+question in English — and it adds **no analysis of its own**. Every number in an answer was computed
+by the RCA or anomaly engine and persisted before the model saw it.
+
+**The model appears exactly twice.** Once to turn the question into a typed `Intent`, once to turn a
+grounded `EvidenceBundle` into prose. Everything between is ordinary Python: resolve the KPI, pick a
+plan, run it, collect the numbers, check the answer. That is what makes the whole path testable
+without a model running, and what keeps a wrong guess from becoming a wrong number.
+
+**Few-shot examples are load-bearing, and that is measured, not assumed.** Against `qwen3:4b` on nine
+representative questions, a schema plus field descriptions classified **4 of 9** correctly, leaked the
+*string* `"null"` on 5, and echoed the whole question into `kpi_hint` on 5. The same schema plus one
+example per intent: **9 of 9**, no leaks, no echoes, and faster. Both produced valid JSON every time —
+the constraint is reliable, the semantics are not without examples. So the examples live in
+`prompts/intent.py` as data, a test asserts every intent has one, and `"null"` coercion is mandatory
+rather than defensive.
+
+**The answer is requested under a schema too, for the same reason.** Asked for a paragraph as free
+text, the model wrote its entire deliberation — restating the rules, arguing with itself, hitting the
+token limit before reaching the answer. Asked for `{"answer": "..."}`, it wrote three clean sentences.
+So `LlmProvider` has one generation method, not two.
+
+**Six tools, two computations.** `run_investigation` computes every dimension's breakdown and drills
+one path in a single pass; `_drill` is private and mutates nodes in place. There is no per-dimension
+or per-segment entry point. So `get_kpi_result`, `dimension_analysis`, `contribution_analysis` and
+`drill_down` are **projections of one investigation** rather than four analyses — cheaper, and four
+views of one computation cannot contradict each other. `detect_anomaly` is the exception and really
+does call `anomaly_service`. The registry is an allow-list: no writes, no SQL, and nothing that could
+reach `DELETE /api/rca/investigations/{dataset_id}`, which despite its name deletes a KPI definition.
+
+**"Never invent numbers" is a check, not a request.** Section 1.8 made *never fabricate SQL*
+mechanical by asserting byte-identity against the query trace. This does the same for prose: every
+figure in a generated answer must appear in the evidence bundle, or the answer is discarded and
+rebuilt from the bundle by template. Dates and small integers are exempt, and rounding is allowed —
+a guard that fires on correct answers gets switched off. The same pass rejects causal wording, because
+*contributed* is defensible from the arithmetic and *caused* is not.
+
+**An unavailable model costs the prose, never the analysis.** `POST /api/ai/analyze` returns 200 with
+`answer_is_template: true` and every structured field populated. The keyword classifier routes the
+question, the engines run unchanged, and the answer is assembled from the evidence. A response never
+presents a template as the model's work.
+
+**A period named in a question is reported against, not analysed.** Periods are anchored on the
+data's own latest timestamp, so "in July" cannot be targeted — reaching `ComparisonPeriod.CUSTOM`
+would mean *writing a new KPI definition* and deactivating the current one. Instead the claim is
+reconciled against the windows that were actually compared, month names included, and any
+substitution becomes a stated assumption. When the named period *is* the analysed one, nothing is
+said, because a caveat that fires needlessly trains a reader to skip the ones that matter.
+
+**Nothing new is persisted.** §24 asks for short-term context and §38 forbids long-term memory, and
+the platform already has the durable artifact. A follow-up carrying an `investigation_id` reads the
+persisted tree and evidence instead of re-running the engine. `Investigation.question` had existed
+since Phase 3, plumbed end to end and set by nothing — it now records the question that prompted the
+run.
+
+**An empty driver list is ambiguous, so the bundle says which it means.** "Nothing was material
+enough to name" is a finding; "nobody looked" is not. Reporting the first while meaning the second
+would be an absence nobody checked for, so `contribution_analysed` travels with the list.
+
+### 1.10 Frontend
 
 
 Next.js 16 App Router, React 19, Server Components by default with `"use client"` islands only
@@ -262,6 +327,8 @@ where interaction demands it.
 | `/sql`, `/sql/new`, `/sql/[connectionId]` | Connections, editor, result grid, save-as-dataset |
 | `/investigations` | Picker: the datasets that are Analysis Ready |
 | `/investigations/[datasetId]` | The investigation — KPI summary, waterfall, drivers, tree, evidence |
+| `/ai-analyst` | Picker, with a warning up front if the model is unreachable |
+| `/ai-analyst/[datasetId]` | Ask a question — composer, stage list, grounded answer, links to the investigation |
 
 Upload progress uses **XMLHttpRequest** because `fetch()` cannot report it. Status polling checks
 document visibility and stops at a 10-minute deadline. The profile tabs are client state synced to
@@ -279,14 +346,18 @@ document visibility and stops at a 10-minute deadline. The profile tabs are clie
 | Materialization | PyArrow → Parquet | Every source type converges on one typed format |
 | SQL Server | **pymssql** + sqlglot | manylinux wheels, so the slim image needs no ODBC driver |
 | Secrets | `cryptography` Fernet | SQL credentials encrypted at rest |
+| Language model | **Ollama** (`qwen3:4b` by default) | Local, so no data leaves the host; behind an ABC so another provider is one file |
 | Frontend | Next.js 16 + React 19 | Hand-written CSS, token-based, no UI framework |
+
+The AI layer added **no runtime dependency**: `httpx` was already pinned for the test client, and the
+provider talks to Ollama over its HTTP API.
 
 ## 3. Repository layout
 
 ```
 backend/app/
   api/routes/     context, uploads, datasets, sql_connections, sql_editor, rca, anomalies,
-                  investigations
+                  investigations, ai
   api/deps.py     get_db, get_current_context   ← the single auth seam
   core/           config, security, logging, exceptions, middleware
   db/models/      company, user, dataset, profile, validation, kpi, sql_connection,
@@ -294,7 +365,12 @@ backend/app/
   db/migrations/  0001 initial schema · 0002 seed default context · 0003 investigation layer
   schemas/        Pydantic request/response contracts
   services/       dataset, dataset_source, profiling, validation, kpi, sql, storage, jobs,
-                  materialize, rca, anomaly, investigation
+                  materialize, rca, anomaly, investigation, ai_analyst
+  ai/             constants, models, keywords, intent, resolve, planner, executor,
+                  grounding, verify, explain, render                        (pure, no DB)
+  ai/tools/       base + kpi, dimension, contribution, drilldown, anomaly, investigation
+  ai/providers/   base (ABC), ollama, fake
+  ai/prompts/     intent (with the measured few-shot set), explain
   analysis/       duckdb_session, trace, type_inference, profiler, kpi_heuristics (pure, no DB)
   analysis/rca/   constants, models, casting, period_analysis, dimension_analysis,
                   contribution, ranking, tree, engine                       (pure, no DB)
@@ -307,9 +383,10 @@ backend/app/
 frontend/src/
   app/            routes
   components/     ui primitives + layout
-  features/       datasets (upload, profile, kpi), sql-editor, rca, rca/evidence, anomaly
+  features/       datasets (upload, profile, kpi), sql-editor, rca, rca/evidence, anomaly,
+                  ai-analyst
   lib/api/        typed client: base-url, http, errors, datasets, sql, uploads, rca,
-                  anomaly, investigations
+                  anomaly, investigations, ai
   styles/         tokens, base, components
 docker/nginx/
 docs/             database-erd.pdf
@@ -374,6 +451,26 @@ cd frontend
 npm install
 API_INTERNAL_URL=http://localhost:8000 API_PROXY_TARGET=http://localhost:8000 npm run dev
 ```
+
+### The AI analyst
+
+Optional. Everything else works without it, and `/ai-analyst` still answers questions when it is
+absent — the analysis runs and the wording is assembled from the evidence instead of written.
+
+```bash
+ollama serve                  # http://localhost:11434
+ollama pull qwen3:4b          # or set OLLAMA_MODEL to one you already have
+```
+
+`GET /api/ai/health` reports what it found, including naming the `ollama pull` command when the daemon
+is up but the configured model is not installed. There is no Ollama service in `docker-compose.yml`:
+the model wants the host's GPU, and shipping a container that quietly runs on CPU would make the first
+question take a minute for no visible reason.
+
+**Changing `OLLAMA_MODEL` means re-checking intent accuracy.** The few-shot examples in
+`app/ai/prompts/intent.py` were tuned against `qwen3:4b`, where they moved classification from 4/9 to
+9/9. `AI_PROVIDER=fake` runs the whole pipeline with a deterministic canned provider and no model at
+all — it is what the test suite uses, and it is refused outside development.
 
 > Migrations are **not** applied automatically. Without `alembic upgrade head`, `/api/context`
 > fails because the default company row does not exist.
@@ -460,6 +557,27 @@ bundle would permanently carry `localhost:8000`. Instead the browser always call
   latest bucket is still filling, the engine steps back one period and says so — otherwise a
   half-collected month reads as a collapse. With an unknown reporting frequency it cannot tell, and
   keeps the period.
+- **Natural language cannot change what is computed.** The AI analyst chooses *which* analysis to run
+  and how to explain it; the analysis itself comes entirely from the KPI definition.
+  `Investigation.question` "steers nothing" was written in Phase 3 and is still true. Asking for a
+  different measure, aggregation or filter means editing the KPI, not phrasing the question
+  differently.
+- **The AI cannot target a period.** Periods are anchored on the data's own latest timestamp, and
+  `ComparisonPeriod.CUSTOM` — which *is* fully implemented in the engine — is reachable only by
+  creating a KPI definition, which deactivates the current one and invalidates the reuse history. So a
+  named period is reconciled against the windows actually compared and reported as an assumption. Real
+  support means a per-request period override on `RcaSpec` and `InvestigationCreate`.
+- **Only one branch of the hierarchy is deep.** A follow-up about a segment that is secondary,
+  offsetting or immaterial gets its `stop_reason` rather than a breakdown, because none was computed.
+  That is the honest answer, not a workaround — but it does mean "what happened in X" is not always
+  answerable at depth.
+- **A 4B model needs its examples.** Intent accuracy was 4/9 without few-shot prompting and 9/9 with;
+  free-text prose was unusable until it was requested under a schema. Both numbers are properties of
+  this model, so swapping `OLLAMA_MODEL` means re-running that check. The examples are data in
+  `prompts/intent.py` to keep that cheap.
+- **No streaming.** There is no SSE or WebSocket precedent in the app and `apiFetch` is one JSON body,
+  so the stage list is client-side optimism over a single request rather than live progress. A warm
+  question takes about ten seconds end to end; the first on a dataset also scans the file.
 
 ## 7. PRD gaps this implementation had to resolve
 
@@ -476,7 +594,7 @@ The PRD leaves four things undefined. These choices are worth reviewing:
 
 ## 8. Test suite
 
-**500 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
+**647 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
 credential encryption, log redaction and local storage; plus the RCA engine —
 contribution maths (including a property test that AVG's rate + mix effects reconstruct ΔA for
 random inputs), period resolution across all five comparison settings, driver classification, the
@@ -502,6 +620,23 @@ marginals are re-checked from the CSV in `test_investigation_fixture.py`, so a h
 the answer fails there rather than in the acceptance test where the cause would be hard to see. The
 same fixture also produces an explainability of 132 %, which covers the *above 100 % is not an error*
 case.
+
+The AI layer adds 84 tests and no new dependency. Unit tests cover the sanitisation the real model
+made necessary — the string `"null"`, the echoed question, the hint that appears nowhere in it — the
+plan recipes (including that root cause is a superset of the narrower ones, so a misclassified intent
+degrades rather than misleads), all five rungs of the KPI ladder, and both guards: an invented figure
+is caught, a rounded one is not, and a causal claim is replaced. The Ollama provider is driven through
+`httpx.MockTransport`, so what is asserted is the request it actually builds — the schema in `format`,
+`think: false`, `temperature: 0` — rather than a stubbed function's arguments. `httpx` was already
+pinned for the test client, which is why `respx` is absent.
+
+The AI integration tests run against `AI_PROVIDER=fake`, a deterministic provider that classifies with
+the keyword rules and writes from the evidence lines it is given. So the whole path — understand,
+resolve, plan, execute, ground, explain, verify — is exercised with no model installed and no flaky
+assertion. What they assert is never the prose: it is that the structured answer is right, that the
+question is recorded on the investigation, that a follow-up creates no second row, and that every
+failure degrades — an ambiguous KPI asks, a dead model returns a template with the drivers intact, an
+unreachable segment reports why.
 
 Fixtures run against SQLite; models use `JSON().with_variant(JSONB, "postgresql")` so the same
 schema is testable without a server.
@@ -558,7 +693,21 @@ GET    /api/investigations/{id}/audit                  what happened, in order
 GET    /api/evidence/{id}                              one record, addressable on its own
 
 POST   /api/anomalies/detections                      {dataset_id, grain?, method?} -> 200
+
+POST   /api/ai/analyze                                {question, dataset_id, investigation_id?} -> 200
+GET    /api/ai/health                                 always 200 with an `ok` flag
+GET    /api/ai/tools                                  the allow-list of analytical operations
 ```
+
+`POST /api/ai/analyze` returns **200**, like the two stateless analysis endpoints: it may cause an
+investigation to be created as a side effect and returns that id, but the answer itself is not a
+stored resource. A `status` of `clarification` is also 200 — the question was understood well enough
+to know it cannot be answered as asked, which is an answer. `partial` means the analysis succeeded
+and something optional did not, most often the written explanation.
+
+`GET /api/ai/health` never fails: a model daemon being down is a normal, renderable state, and the
+page is meant to say so while still offering the analysis. Same reasoning as the SQL Server
+connection test.
 
 `POST /api/rca/investigations` returns 200 rather than 201: it is stateless and creates nothing.
 `POST /api/investigations` returns **201** because it does — and 200 when it reused an equivalent

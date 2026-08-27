@@ -25,6 +25,9 @@ os.environ.setdefault("DUCKDB_TEMP_DIR", str(_TMP / "duckdb"))
 # Inline profiling so assertions never race the background task.
 os.environ.setdefault("PROFILING_ASYNC", "false")
 os.environ.setdefault("ENCRYPTION_KEY", "test-encryption-key-for-the-suite-only")
+# The deterministic language-model provider, so the suite runs with no Ollama
+# installed and two runs of the same question produce the same answer.
+os.environ.setdefault("AI_PROVIDER", "fake")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402

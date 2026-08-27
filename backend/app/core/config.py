@@ -98,6 +98,32 @@ class Settings(BaseSettings):
     # process died mid-request. Sibling of profiling_stale_minutes.
     investigation_stale_minutes: int = 10
 
+    # --- ai analyst ------------------------------------------------------
+    # The AI layer understands the question and explains the evidence. It never
+    # computes an analytical number, so nothing here is a statistical knob: the
+    # values below are operational caps and a provider address.
+    ai_enabled: bool = True
+    # Selects the LlmProvider implementation, mirroring storage_backend.
+    ai_provider: str = "ollama"
+    ollama_base_url: str = "http://localhost:11434"
+    # Configurable rather than hardcoded, because the intent prompt's few-shot
+    # examples were tuned against one model and a swap has to be re-checked.
+    ollama_model: str = "qwen3:4b"
+    # A cold model load costs ~10s and a warm call ~3s, so the default leaves
+    # headroom for the load without letting a wedged daemon hold a request open.
+    ai_request_timeout_seconds: int = 60
+    ai_max_timeout_seconds: int = 180
+    # The longest plan recipe is five steps, so a breach of this cap means the
+    # planner is looping - not that the budget is tight.
+    ai_max_tool_calls: int = 6
+    ai_max_plan_steps: int = 8
+    # Matches the frontend's own 120s timeout on a first investigation, so the
+    # server gives up before the browser does rather than after.
+    ai_max_execution_seconds: int = 120
+    # Schema-constrained output was valid on every attempt in testing, so retries
+    # exist for a dropped connection, not for model unreliability.
+    ai_intent_retries: int = 2
+
     # --- secrets ---------------------------------------------------------
     encryption_key: SecretStr | None = None
     encryption_keys_legacy: list[str] = []

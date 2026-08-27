@@ -1569,3 +1569,118 @@
     gap: var(--space-3);
   }
 }
+
+/* ---------------------------------------------------------- ai analyst */
+/* One question and its answer. The composer reuses .panel and .textarea; only
+   the thread and the answer's own blocks need new classes. */
+
+.analyst-suggestions {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.analyst-turn {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* The question, restated above its answer. Quiet on purpose: the reader wrote
+   it, so it is a label rather than content. */
+.analyst-question {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.analyst-answer {
+  font-size: 15px;
+  line-height: 1.65;
+  /* Wider than the 46ch of an EmptyState description - this is a paragraph to
+     read, not a caption - but still short of full width, which is where prose
+     starts losing the line. */
+  max-width: 72ch;
+  margin: 0 0 var(--space-2);
+}
+
+/* Who wrote the paragraph. A reader is never shown a template as a model's work,
+   so this line is not decorative. */
+.analyst-provenance {
+  align-items: center;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+  margin: 0;
+}
+
+.analyst-headline {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+}
+
+.analyst-headline dt {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.analyst-headline dd {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 2px 0 0;
+}
+
+/* The period pair is prose, not a figure, so it does not get the tabular size. */
+.analyst-periods dd {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.analyst-drill {
+  font-size: 13px;
+  margin: var(--space-3) 0 0;
+}
+
+.analyst-options {
+  display: grid;
+  gap: 6px;
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+}
+
+.analyst-evidence-ref {
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.analyst-step-time {
+  font-size: 11px;
+  margin-left: var(--space-2);
+}
+
+.analyst-footnote {
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .analyst-headline {
+    gap: var(--space-4);
+  }
+}
