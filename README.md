@@ -115,7 +115,22 @@ dimension exists and is dimension-eligible, and the aggregation is legal for the
 
 - **Saved connections** with the password **encrypted at rest** (Fernet, `v1:` versioned prefix,
   `MultiFernet` key rotation). The read schema has no password field at all, so a password cannot
-  leak through the API even by mistake.
+  leak through the API even by mistake. Connections are deletable from the list and from the editor
+  header, with the same two-step inline confirm the datasets list uses.
+- **Two authentication modes.** `sql` is a username and password. `windows` is integrated
+  authentication and stores **no credential at all** — `password_encrypted` is NULL, because the
+  connection borrows the identity of the server process. A nullable column is the honest shape:
+  an encrypted empty string would make *no password* and *the password is blank* indistinguishable,
+  and a CHECK constraint holds the invariant that SQL auth always has a token and Windows auth never
+  does. Sending a password with `windows` is a 422 rather than being ignored — silently dropping a
+  credential someone believes is protecting something is worse than refusing the request.
+- **Windows auth needs a second driver, and that is not a preference.** `pymssql` is FreeTDS-based
+  and rejects a `trusted_connection` argument outright, so `windows` connections go through `pyodbc`
+  with `Trusted_Connection=yes`. Both drivers are kept rather than moving everything to `pyodbc`: a
+  wholesale swap would change the driver under every working connection and break the Linux image,
+  which has no unixODBC. Only `connect()` branches — everything past it is plain DBAPI 2.0. The one
+  place the drivers disagree is `cursor.description[1]`, an int in `pymssql` and a Python type object
+  in `pyodbc`, normalised by `_type_code`.
 - **Read-only guard** parsed with `sqlglot`, not regex. Rejects anything that is not a single
   `SELECT`/`WITH`, then walks the AST for write nodes — including `SELECT … INTO`, which parses
   as a `Select` but creates a table, and `exp.Command`, which covers `EXEC`, `BACKUP`, `DBCC`,
@@ -345,6 +360,7 @@ document visibility and stops at a 10-minute deadline. The profile tabs are clie
 | Profiling | **DuckDB** | Profiles a 200 MB CSV out-of-core |
 | Materialization | PyArrow → Parquet | Every source type converges on one typed format |
 | SQL Server | **pymssql** + sqlglot | manylinux wheels, so the slim image needs no ODBC driver |
+| SQL Server (Windows auth) | **pyodbc** | Only for integrated auth; `pymssql` cannot do it. Imported lazily, so the Linux image never loads it |
 | Secrets | `cryptography` Fernet | SQL credentials encrypted at rest |
 | Language model | **Ollama** (`qwen3:4b` by default) | Local, so no data leaves the host; behind an ABC so another provider is one file |
 | Frontend | Next.js 16 + React 19 | Hand-written CSS, token-based, no UI framework |
@@ -362,7 +378,8 @@ backend/app/
   core/           config, security, logging, exceptions, middleware
   db/models/      company, user, dataset, profile, validation, kpi, sql_connection,
                   investigation, enums
-  db/migrations/  0001 initial schema · 0002 seed default context · 0003 investigation layer
+  db/migrations/  0001 initial schema · 0002 seed default context · 0003 investigation layer ·
+                  0004 SQL Server Windows authentication
   schemas/        Pydantic request/response contracts
   services/       dataset, dataset_source, profiling, validation, kpi, sql, storage, jobs,
                   materialize, rca, anomaly, investigation, ai_analyst
@@ -557,6 +574,15 @@ bundle would permanently carry `localhost:8000`. Instead the browser always call
   latest bucket is still filling, the engine steps back one period and says so — otherwise a
   half-collected month reads as a collapse. With an unknown reporting frequency it cannot tell, and
   keeps the period.
+- **Windows authentication cannot work from the container.** It borrows the identity of the process
+  serving the API, so it needs that process to run on Windows as an account with a SQL Server login.
+  The Compose image is Linux and has no Windows identity to present; it also does not install
+  unixODBC, so `pyodbc` would not import there. Both failures are typed
+  (`SQLSERVER_ODBC_DRIVER_UNAVAILABLE`, `SQLSERVER_ODBC_DRIVER_MISSING`) and name the alternative
+  rather than surfacing an `ImportError`. The mode is for local and on-premise Windows deployments.
+- **A saved connection cannot be switched between auth modes.** `PATCH` deliberately omits
+  `auth_mode`: changing it would mean adding or discarding a credential mid-update, and a partial
+  update could leave the row failing its own CHECK. Delete it and create the connection you want.
 - **Natural language cannot change what is computed.** The AI analyst chooses *which* analysis to run
   and how to explain it; the analysis itself comes entirely from the KPI definition.
   `Investigation.question` "steers nothing" was written in Phase 3 and is still true. Asking for a
@@ -594,7 +620,7 @@ The PRD leaves four things undefined. These choices are worth reviewing:
 
 ## 8. Test suite
 
-**647 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
+**678 tests.** Unit tests for type inference, KPI heuristics, validation rules, the SQL guard,
 credential encryption, log redaction and local storage; plus the RCA engine —
 contribution maths (including a property test that AVG's rate + mix effects reconstruct ΔA for
 random inputs), period resolution across all five comparison settings, driver classification, the

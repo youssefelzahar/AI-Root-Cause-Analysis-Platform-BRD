@@ -4,15 +4,16 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert, Panel, PanelHeading } from "@/components/ui";
-import { createConnection, testUnsavedConnection, type SqlConnectionInput } from "@/lib/api/sql";
 import { toUserMessage } from "@/lib/api/errors";
-import type { SqlConnectionTestResult } from "@/types/api";
+import { createConnection, testUnsavedConnection, type SqlConnectionInput } from "@/lib/api/sql";
+import type { SqlAuthMode, SqlConnectionTestResult } from "@/types/api";
 
 const EMPTY: SqlConnectionInput = {
   name: "",
   host: "",
   port: 1433,
   database: "",
+  auth_mode: "sql",
   username: "",
   password: "",
   encrypt: true,
@@ -25,6 +26,8 @@ export function ConnectionForm() {
   const [busy, setBusy] = useState<"test" | "save" | null>(null);
   const [testResult, setTestResult] = useState<SqlConnectionTestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const windowsAuth = form.auth_mode === "windows";
 
   const update = <K extends keyof SqlConnectionInput>(key: K, value: SqlConnectionInput[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -120,41 +123,74 @@ export function ConnectionForm() {
           />
         </div>
 
-        <div className="form-row">
-          <div className="field">
-            <label className="field-label" htmlFor="conn-username">
-              Username
-            </label>
-            <input
-              id="conn-username"
-              className="input"
-              required
-              autoComplete="off"
-              value={form.username}
-              onChange={(event) => update("username", event.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="conn-password">
-              Password
-            </label>
-            <input
-              id="conn-password"
-              className="input"
-              type="password"
-              required
-              // Not "password", so browsers do not offer to autofill the
-              // user's own saved credentials into a database connection form.
-              name="db-credential"
-              autoComplete="new-password"
-              value={form.password}
-              onChange={(event) => update("password", event.target.value)}
-            />
+        <div className="field">
+          <label className="field-label" htmlFor="conn-auth-mode">
+            Sign in with
+          </label>
+          <select
+            id="conn-auth-mode"
+            className="select"
+            value={form.auth_mode}
+            onChange={(event) => update("auth_mode", event.target.value as SqlAuthMode)}
+          >
+            <option value="sql">SQL Server login (username and password)</option>
+            <option value="windows">Windows authentication (no password)</option>
+          </select>
+          {windowsAuth ? (
             <p className="field-hint">
-              Encrypted before it is stored. It is never returned by the API.
+              The connection signs in as the Windows account this server runs as, so
+              no credential is stored. That account needs its own SQL Server login.
             </p>
-          </div>
+          ) : null}
         </div>
+
+        {/* Windows auth genuinely has no username and no password - the login is
+            the server process itself - so the fields are removed rather than
+            disabled. A disabled password box implies one exists and is unusable. */}
+        {windowsAuth ? (
+          <Alert tone="info" title="This needs the backend to run on Windows">
+            Windows authentication borrows the identity of the process serving this
+            API, so it works when that runs on Windows as an account with access to
+            the database. It cannot work from the Docker container, which is Linux and
+            has no Windows identity to present.
+          </Alert>
+        ) : (
+          <div className="form-row">
+            <div className="field">
+              <label className="field-label" htmlFor="conn-username">
+                Username
+              </label>
+              <input
+                id="conn-username"
+                className="input"
+                required
+                autoComplete="off"
+                value={form.username}
+                onChange={(event) => update("username", event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="conn-password">
+                Password
+              </label>
+              <input
+                id="conn-password"
+                className="input"
+                type="password"
+                required
+                // Not "password", so browsers do not offer to autofill the
+                // user's own saved credentials into a database connection form.
+                name="db-credential"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(event) => update("password", event.target.value)}
+              />
+              <p className="field-hint">
+                Encrypted before it is stored. It is never returned by the API.
+              </p>
+            </div>
+          </div>
+        )}
 
         <label className="checkbox-row">
           <input
@@ -199,7 +235,9 @@ export function ConnectionForm() {
             type="button"
             className="btn btn-secondary"
             onClick={handleTest}
-            disabled={busy !== null || !form.host || !form.username}
+            // Windows auth needs no username, so requiring one here would leave
+            // the button permanently disabled in that mode.
+            disabled={busy !== null || !form.host || (!windowsAuth && !form.username)}
           >
             {busy === "test" ? "Testing…" : "Test connection"}
           </button>

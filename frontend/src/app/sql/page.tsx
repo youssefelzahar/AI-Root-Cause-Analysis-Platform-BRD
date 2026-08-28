@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState, Panel, Pill } from "@/components/ui";
+import { DeleteConnectionButton } from "@/features/sql-editor/delete-connection-button";
 import { listConnections } from "@/lib/api/sql";
 import { formatDate } from "@/lib/format";
 
@@ -43,7 +44,7 @@ export default async function SqlConnectionsPage() {
                   <th>Name</th>
                   <th>Server</th>
                   <th>Database</th>
-                  <th>User</th>
+                  <th>Sign-in</th>
                   <th>Last test</th>
                   <th />
                 </tr>
@@ -58,7 +59,14 @@ export default async function SqlConnectionsPage() {
                       {connection.host}:{connection.port}
                     </td>
                     <td className="muted">{connection.database_name}</td>
-                    <td className="muted">{connection.username}</td>
+                    <td className="muted">
+                      {/* Named rather than shown as an empty cell: under Windows
+                          auth there is no username, and a blank column would read
+                          as missing data rather than as a different sign-in. */}
+                      {connection.auth_mode === "windows"
+                        ? "Windows authentication"
+                        : connection.username}
+                    </td>
                     <td>
                       {connection.last_test_ok === null ? (
                         <Pill tone="neutral">Not tested</Pill>
@@ -70,9 +78,15 @@ export default async function SqlConnectionsPage() {
                       <span className="muted">{formatDate(connection.last_tested_at)}</span>
                     </td>
                     <td>
-                      <Link className="btn btn-ghost btn-sm" href={`/sql/${connection.id}`}>
-                        Open editor
-                      </Link>
+                      <div className="row-actions">
+                        <Link className="btn btn-ghost btn-sm" href={`/sql/${connection.id}`}>
+                          Open editor
+                        </Link>
+                        <DeleteConnectionButton
+                          connectionId={connection.id}
+                          name={connection.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}

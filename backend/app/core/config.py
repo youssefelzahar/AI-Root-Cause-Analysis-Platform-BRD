@@ -47,12 +47,12 @@ class Settings(BaseSettings):
     storage_tmp_dir: str = "/data/tmp"
 
     # --- uploads ---------------------------------------------------------
-    max_upload_bytes: int = 209_715_200  # 200 MB (PRD section 6)
+    max_upload_bytes: int = 609_715_200  # 600 MB (PRD section 6)
     upload_chunk_bytes: int = 1_048_576  # 1 MB (PRD section 6)
     allowed_upload_extensions: list[str] = [".csv", ".tsv", ".txt", ".xlsx"]
     # xlsx is zip-compressed and cannot be streamed for parsing, so it gets a
     # tighter cap than the PRD's CSV-oriented 200 MB.
-    excel_max_bytes: int = 26_214_400  # 25 MB
+    excel_max_bytes: int = 56_214_400  # 25 MB
     excel_max_rows: int = 1_000_000
     reject_duplicate_uploads: bool = False
 
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     profile_percentiles: list[float] = [0.01, 0.05, 0.25, 0.5, 0.75, 0.95, 0.99]
     duplicate_check_max_columns: int = 200
     exact_quantile_row_limit: int = 5_000_000
-    duckdb_memory_limit: str = "512MB"
+    duckdb_memory_limit: str = "4GB"
     duckdb_threads: int = 2
     duckdb_temp_dir: str = "/data/tmp/duckdb"
 

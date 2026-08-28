@@ -248,12 +248,23 @@ export type PreviewRead = {
 };
 
 /** Note: no password field exists on this type, by design. */
+/**
+ * How a saved connection authenticates.
+ *
+ * `windows` is integrated authentication: no password is stored, because the
+ * connection borrows the identity of the server process. It therefore only works
+ * where that process runs on Windows as the user holding the SQL Server grant.
+ */
+export type SqlAuthMode = "sql" | "windows";
+
 export type SqlConnection = {
   id: string;
   name: string;
   host: string;
   port: number;
   database_name: string;
+  auth_mode: SqlAuthMode;
+  /** Empty string under Windows authentication - there is no user to name. */
   username: string;
   encrypt: boolean;
   trust_server_certificate: boolean;

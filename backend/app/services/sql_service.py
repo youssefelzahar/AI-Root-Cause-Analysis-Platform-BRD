@@ -14,7 +14,13 @@ from app.core.exceptions import AppError, ConflictError, NotFoundError
 from app.core.logging import get_logger
 from app.core.security import decrypt_secret, encrypt_secret
 from app.db.models import Dataset, SqlConnection
-from app.db.models.enums import DatasetStatus, FileFormat, SourceType, UploadStatus
+from app.db.models.enums import (
+    DatasetStatus,
+    FileFormat,
+    SourceType,
+    SqlAuthMode,
+    UploadStatus,
+)
 from app.services.materialize import rows_to_parquet, temp_path
 from app.services.storage_service import get_storage
 
@@ -31,8 +37,16 @@ def _params(connection: SqlConnection) -> sqlserver.ConnectionParams:
         host=connection.host,
         port=connection.port,
         database=connection.database_name,
+        auth_mode=connection.auth_mode,
         username=connection.username,
-        password=decrypt_secret(connection.password_encrypted),
+        # Only decrypted when there is something to decrypt. A Windows-auth row
+        # stores no token, and calling decrypt on NULL would fail with an
+        # encryption error rather than the honest "this mode has no password".
+        password=(
+            decrypt_secret(connection.password_encrypted)
+            if connection.password_encrypted
+            else None
+        ),
         encrypt=connection.encrypt,
         trust_server_certificate=connection.trust_server_certificate,
         login_timeout=settings.sqlserver_connect_timeout,
@@ -52,6 +66,7 @@ def create_connection(
             f"A connection named '{payload['name']}' already exists.", code="CONNECTION_NAME_TAKEN"
         )
 
+    password = payload.get("password")
     connection = SqlConnection(
         company_id=company_id,
         created_by=user_id,
@@ -59,9 +74,12 @@ def create_connection(
         host=payload["host"],
         port=payload.get("port", 1433),
         database_name=payload["database"],
-        username=payload["username"],
-        # Encrypted immediately; the plaintext never reaches the database.
-        password_encrypted=encrypt_secret(payload["password"]),
+        auth_mode=payload.get("auth_mode", SqlAuthMode.SQL.value),
+        username=payload.get("username") or "",
+        # Encrypted immediately; the plaintext never reaches the database. NULL
+        # under Windows auth, which stores no credential at all - the schema's own
+        # CHECK holds that invariant.
+        password_encrypted=encrypt_secret(password) if password else None,
         encrypt=payload.get("encrypt", True),
         trust_server_certificate=payload.get("trust_server_certificate", False),
     )
@@ -96,6 +114,13 @@ def update_connection(db: Session, connection: SqlConnection, payload: dict[str,
             setattr(connection, column, payload[field_name])
     # Only re-encrypt when a new password was actually supplied.
     if payload.get("password"):
+        if connection.auth_mode == SqlAuthMode.WINDOWS.value:
+            # Accepting it would store a credential the connector will never send,
+            # and leave the row failing its own CHECK.
+            raise ConflictError(
+                "This connection uses Windows authentication, which takes no password.",
+                code="AUTH_MODE_TAKES_NO_PASSWORD",
+            )
         connection.password_encrypted = encrypt_secret(payload["password"])
     db.commit()
     db.refresh(connection)
@@ -117,8 +142,9 @@ def test_unsaved(payload: dict[str, Any]) -> dict[str, Any]:
             host=payload["host"],
             port=payload.get("port", 1433),
             database=payload["database"],
-            username=payload["username"],
-            password=payload["password"],
+            auth_mode=payload.get("auth_mode", SqlAuthMode.SQL.value),
+            username=payload.get("username") or "",
+            password=payload.get("password"),
             encrypt=payload.get("encrypt", True),
             trust_server_certificate=payload.get("trust_server_certificate", False),
             login_timeout=settings.sqlserver_connect_timeout,

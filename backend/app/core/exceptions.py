@@ -93,7 +93,12 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
         if exc.status_code >= 500:
-            logger.error("app_error", extra={"code": exc.code, "message": exc.message})
+            # NOT "message": logging reserves that key (and "asctime") and
+            # `makeRecord` raises KeyError on it. Raising here would crash this
+            # handler, fall through to `_unhandled`, and turn every typed 5xx into
+            # a generic 500 - throwing away the code and message this envelope
+            # exists to deliver. That is exactly what it did until this was fixed.
+            logger.error("app_error", extra={"code": exc.code, "error": exc.message})
         return JSONResponse(status_code=exc.status_code, content=exc.to_payload())
 
     @app.exception_handler(RequestValidationError)

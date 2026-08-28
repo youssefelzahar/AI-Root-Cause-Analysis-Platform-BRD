@@ -95,3 +95,18 @@ def save_query_as_dataset(
     enqueue_profiling(dataset.id, background_tasks)
     db.refresh(dataset)
     return to_detail(db, dataset)
+
+@router.delete("/connections/{connection_id}/cancel", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_query(
+    connection_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    ctx: RequestContext = Depends(get_current_context),
+) -> None:
+    """Cancel a running query.
+
+    This is a best-effort operation. If the query has already completed, this
+    will do nothing.
+    """
+    connection = sql_service.get_connection(db, connection_id, ctx.company_id)
+    sql_service.cancel_query(connection)
+    

@@ -21,6 +21,23 @@ class FileFormat(str, Enum):
     PARQUET = "parquet"
 
 
+class SqlAuthMode(str, Enum):
+    """How a saved SQL Server connection authenticates.
+
+    ``SQL`` is a username and password, which every driver supports and which is
+    the only mode that works from a Linux container.
+
+    ``WINDOWS`` is integrated authentication: no password is stored at all,
+    because the connection borrows the identity of the process the backend runs
+    as. That means it works only when the backend runs on Windows as the user who
+    has the SQL Server grant - never inside this project's Docker image, which is
+    Linux and has no Windows identity to borrow.
+    """
+
+    SQL = "sql"
+    WINDOWS = "windows"
+
+
 class UploadStatus(str, Enum):
     """Physical lifecycle of the stored bytes (PRD section 7)."""
 

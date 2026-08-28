@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+
+from app.db.models.enums import SqlAuthMode
 
 
 class SqlConnectionCreate(BaseModel):
@@ -10,12 +12,43 @@ class SqlConnectionCreate(BaseModel):
     host: str = Field(min_length=1, max_length=255)
     port: int = Field(default=1433, ge=1, le=65535)
     database: str = Field(min_length=1, max_length=128)
-    username: str = Field(min_length=1, max_length=128)
+    # Defaulted, so every existing client keeps working without sending it.
+    auth_mode: SqlAuthMode = SqlAuthMode.SQL
+    # Both optional at the field level and required by mode below, because which
+    # of them is mandatory depends on auth_mode - a thing a single field cannot say.
+    username: str = Field(default="", max_length=128)
     # SecretStr keeps the value out of reprs, validation errors and the
     # generated OpenAPI examples.
-    password: SecretStr
+    password: SecretStr | None = None
     encrypt: bool = True
     trust_server_certificate: bool = False
+
+    @model_validator(mode="after")
+    def _credentials_match_auth_mode(self) -> "SqlConnectionCreate":
+        """Reject a request whose credentials do not match its mode.
+
+        Windows auth is rejected rather than quietly ignoring a supplied password,
+        because a caller who sent one believes it is being used - and silently
+        dropping a credential someone thinks is protecting something is worse than
+        refusing the request.
+        """
+        if self.auth_mode is SqlAuthMode.WINDOWS:
+            if self.password is not None and self.password.get_secret_value():
+                raise ValueError(
+                    "Windows authentication uses the identity of the server process, "
+                    "so it takes no password. Remove it, or choose SQL authentication."
+                )
+            if self.username.strip():
+                raise ValueError(
+                    "Windows authentication takes no username: the login is whoever "
+                    "the server process runs as."
+                )
+            return self
+        if not self.username.strip():
+            raise ValueError("SQL authentication needs a username.")
+        if self.password is None or not self.password.get_secret_value():
+            raise ValueError("SQL authentication needs a password.")
+        return self
 
     def to_payload(self) -> dict[str, Any]:
         return {
@@ -23,8 +56,9 @@ class SqlConnectionCreate(BaseModel):
             "host": self.host,
             "port": self.port,
             "database": self.database,
-            "username": self.username,
-            "password": self.password.get_secret_value(),
+            "auth_mode": self.auth_mode.value,
+            "username": self.username.strip(),
+            "password": self.password.get_secret_value() if self.password else None,
             "encrypt": self.encrypt,
             "trust_server_certificate": self.trust_server_certificate,
         }
@@ -35,6 +69,10 @@ class SqlConnectionUpdate(BaseModel):
     host: str | None = Field(default=None, max_length=255)
     port: int | None = Field(default=None, ge=1, le=65535)
     database: str | None = Field(default=None, max_length=128)
+    # Deliberately absent: switching a saved connection between authentication
+    # modes would mean adding or discarding a credential under a PATCH, and the
+    # database's own CHECK forbids the half-applied state that a partial update
+    # could produce. Delete it and create the connection you want instead.
     username: str | None = Field(default=None, max_length=128)
     password: SecretStr | None = None
     encrypt: bool | None = None
@@ -61,6 +99,8 @@ class SqlConnectionRead(BaseModel):
     host: str
     port: int
     database_name: str
+    auth_mode: str
+    # Empty string under Windows authentication, where there is no user to name.
     username: str
     encrypt: bool
     trust_server_certificate: bool

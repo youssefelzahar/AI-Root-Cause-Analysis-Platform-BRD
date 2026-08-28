@@ -187,3 +187,155 @@ def test_save_query_as_dataset_produces_a_profiled_dataset(client, monkeypatch) 
     assert profile["state"] == "ready"
     assert profile["profile"]["row_count"] == 4
     assert profile["profile"]["column_count"] == 3
+
+
+# --- windows authentication ---------------------------------------------------
+# The mode exists because pymssql cannot do it: it is FreeTDS-based and rejects a
+# trusted_connection argument outright. So a Windows-auth connection takes the
+# pyodbc path, and the invariant worth pinning is that it stores no credential at
+# all - not an empty one.
+
+WINDOWS_PAYLOAD = {
+    "name": "Warehouse (integrated)",
+    "host": "sqlserver.internal",
+    "port": 1433,
+    "database": "Sales",
+    "auth_mode": "windows",
+}
+
+
+def test_a_windows_auth_connection_needs_no_password(client) -> None:
+    response = client.post("/api/sql-connections", json=WINDOWS_PAYLOAD)
+    assert response.status_code == 201, response.text
+
+    body = response.json()
+    assert body["auth_mode"] == "windows"
+    # No user to name: the login is whoever the server process runs as.
+    assert body["username"] == ""
+
+
+def test_a_windows_auth_connection_stores_no_credential(client, db_session) -> None:
+    """NULL rather than an encrypted empty string, so "no password" and "the
+    password is blank" stay distinguishable."""
+    import uuid
+
+    connection_id = client.post("/api/sql-connections", json=WINDOWS_PAYLOAD).json()["id"]
+    record = db_session.get(SqlConnection, uuid.UUID(connection_id))
+
+    assert record.password_encrypted is None
+    assert record.auth_mode == "windows"
+
+
+def test_sql_auth_still_requires_a_password(client) -> None:
+    """The default mode is unchanged, so an omitted password is still a 422."""
+    payload = {k: v for k, v in PAYLOAD.items() if k != "password"}
+    response = client.post("/api/sql-connections", json=payload)
+    assert response.status_code == 422, response.text
+
+
+def test_sql_auth_still_requires_a_username(client) -> None:
+    payload = {k: v for k, v in PAYLOAD.items() if k != "username"}
+    response = client.post("/api/sql-connections", json=payload)
+    assert response.status_code == 422, response.text
+
+
+def test_a_password_sent_with_windows_auth_is_refused_not_ignored(client) -> None:
+    """Silently dropping a credential someone believes is protecting something is
+    worse than refusing the request."""
+    response = client.post(
+        "/api/sql-connections", json={**WINDOWS_PAYLOAD, "password": PASSWORD}
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_a_username_sent_with_windows_auth_is_refused(client) -> None:
+    response = client.post(
+        "/api/sql-connections", json={**WINDOWS_PAYLOAD, "username": "reader"}
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_a_password_cannot_be_patched_onto_a_windows_connection(client) -> None:
+    """It would store a credential the connector never sends, and leave the row
+    failing its own CHECK constraint."""
+    connection_id = client.post("/api/sql-connections", json=WINDOWS_PAYLOAD).json()["id"]
+
+    response = client.patch(
+        f"/api/sql-connections/{connection_id}", json={"password": PASSWORD}
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["error"]["code"] == "AUTH_MODE_TAKES_NO_PASSWORD"
+
+
+def test_a_windows_connection_reaches_the_connector_without_a_password(
+    client, monkeypatch
+) -> None:
+    """What the service hands the connector, which is where the two drivers part."""
+    from app.connectors import sqlserver
+
+    seen: dict = {}
+
+    def fake_test(params):
+        seen["auth_mode"] = params.auth_mode
+        seen["password"] = params.password
+        seen["is_windows_auth"] = params.is_windows_auth
+        return {"ok": True, "server_version": "Microsoft SQL Server 2022"}
+
+    monkeypatch.setattr(sqlserver, "test_connection", fake_test)
+
+    connection_id = client.post("/api/sql-connections", json=WINDOWS_PAYLOAD).json()["id"]
+    response = client.post(f"/api/sql-connections/{connection_id}/test")
+
+    assert response.status_code == 200, response.text
+    assert seen["auth_mode"] == "windows"
+    assert seen["password"] is None
+    assert seen["is_windows_auth"] is True
+
+
+def test_an_existing_connection_defaults_to_sql_auth(client) -> None:
+    """Migration 0004 defaults the column, so a client that never heard of
+    auth_mode keeps working unchanged."""
+    body = client.post("/api/sql-connections", json=PAYLOAD).json()
+    assert body["auth_mode"] == "sql"
+
+
+# --- deletion -----------------------------------------------------------------
+
+
+def test_a_connection_can_be_deleted(client, db_session) -> None:
+    import uuid
+
+    connection_id = client.post("/api/sql-connections", json=PAYLOAD).json()["id"]
+
+    response = client.delete(f"/api/sql-connections/{connection_id}")
+    assert response.status_code == 204, response.text
+    assert db_session.get(SqlConnection, uuid.UUID(connection_id)) is None
+
+
+def test_deleting_a_connection_twice_is_a_404(client) -> None:
+    connection_id = client.post("/api/sql-connections", json=PAYLOAD).json()["id"]
+    assert client.delete(f"/api/sql-connections/{connection_id}").status_code == 204
+
+    repeat = client.delete(f"/api/sql-connections/{connection_id}")
+    assert repeat.status_code == 404, repeat.text
+    assert repeat.json()["error"]["code"] == "CONNECTION_NOT_FOUND"
+
+
+def test_another_company_cannot_delete_this_connection(client, other_company) -> None:
+    connection_id = client.post("/api/sql-connections", json=PAYLOAD).json()["id"]
+
+    response = client.delete(
+        f"/api/sql-connections/{connection_id}",
+        headers={"X-Company-Id": str(other_company)},
+    )
+    # 404, not 403: the API never confirms another tenant's row exists.
+    assert response.status_code == 404, response.text
+
+
+def test_deleting_a_connection_frees_its_name(client) -> None:
+    """The name is unique per company, so a delete has to actually release it."""
+    connection_id = client.post("/api/sql-connections", json=PAYLOAD).json()["id"]
+    client.delete(f"/api/sql-connections/{connection_id}")
+
+    again = client.post("/api/sql-connections", json=PAYLOAD)
+    assert again.status_code == 201, again.text

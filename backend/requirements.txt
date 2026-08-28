@@ -24,6 +24,12 @@ openpyxl==3.1.5                 # streaming xlsx reads
 
 # --- sql server ---
 pymssql==2.3.2                  # manylinux wheels, no system ODBC driver needed
+# Windows authentication only. pymssql is FreeTDS-based and rejects a
+# trusted_connection argument outright, so integrated auth needs a second driver.
+# Imported lazily in connectors/sqlserver.py, because on Linux importing it fails
+# without unixODBC - which this image does not install, and does not need to: a
+# container has no Windows identity to authenticate with anyway.
+pyodbc==5.2.0
 sqlglot==26.0.1                 # AST-based read-only statement guard
 
 # --- security / logging ---
